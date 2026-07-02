@@ -46,7 +46,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "octopus-observe": "./dist/cli.js"
+    "octopus-observe": "dist/cli.js"
   },
   "files": [
     "dist",
