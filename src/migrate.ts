@@ -58,9 +58,7 @@ export function renormalize(
     normalizationVersion: options.normalizationVersion ?? NORMALIZATION_VERSION,
     supportedEnvelopeVersions: options.supportedEnvelopeVersions ?? SUPPORTED_ENVELOPE_VERSIONS,
     timestampPolicy: options.timestampPolicy ?? DEFAULT_TIMESTAMP_POLICY,
-    ...(options.integritySecret !== undefined
-      ? { integritySecret: options.integritySecret }
-      : {}),
+    ...(options.integritySecret !== undefined ? { integritySecret: options.integritySecret } : {}),
   });
 
   const observations: Observation[] = [];

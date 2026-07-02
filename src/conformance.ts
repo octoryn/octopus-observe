@@ -32,11 +32,7 @@ import assert from "node:assert/strict";
 import type { Observation } from "./core/observation.js";
 import type { AuditRecord } from "./core/audit.js";
 import { deepFreeze } from "./core/freeze.js";
-import type {
-  AuditStore,
-  ObservationStore,
-  RawEventArchive,
-} from "./storage/store.js";
+import type { AuditStore, ObservationStore, RawEventArchive } from "./storage/store.js";
 
 // Observations reach a store already deep-frozen by the pipeline, carrying a
 // full set of populated fields; fixtures do the same so field fidelity is
@@ -117,9 +113,18 @@ export function observationStoreConformance(
     const store = makeStore();
     await store.put(observation({ id: "obs_a", at: 10, type: "ReviewSubmitted" }));
     await store.put(observation({ id: "obs_b", at: 20, type: "DeployFinished" }));
-    assert.deepEqual((await store.query({ types: ["DeployFinished"] })).map((o) => o.id), ["obs_b"]);
-    assert.deepEqual((await store.query({ from: 20, to: 30 })).map((o) => o.id), ["obs_b"]);
-    assert.deepEqual((await store.query({ to: 20 })).map((o) => o.id), ["obs_a"]); // to is exclusive
+    assert.deepEqual(
+      (await store.query({ types: ["DeployFinished"] })).map((o) => o.id),
+      ["obs_b"],
+    );
+    assert.deepEqual(
+      (await store.query({ from: 20, to: 30 })).map((o) => o.id),
+      ["obs_b"],
+    );
+    assert.deepEqual(
+      (await store.query({ to: 20 })).map((o) => o.id),
+      ["obs_a"],
+    ); // to is exclusive
     assert.deepEqual((await store.query({ actor: { id: "alice" } })).map((o) => o.id).sort(), [
       "obs_a",
       "obs_b",
@@ -129,17 +134,35 @@ export function observationStoreConformance(
   test(name("ANDs multiple filter criteria (not OR)"), async () => {
     const store = makeStore();
     await store.put(
-      observation({ id: "match", at: 10, type: "DeployFinished", actors: [{ type: "actor", id: "alice" }] }),
+      observation({
+        id: "match",
+        at: 10,
+        type: "DeployFinished",
+        actors: [{ type: "actor", id: "alice" }],
+      }),
     );
     await store.put(
-      observation({ id: "wrong_actor", at: 11, type: "DeployFinished", actors: [{ type: "actor", id: "bob" }] }),
+      observation({
+        id: "wrong_actor",
+        at: 11,
+        type: "DeployFinished",
+        actors: [{ type: "actor", id: "bob" }],
+      }),
     );
     await store.put(
-      observation({ id: "wrong_type", at: 12, type: "ReviewSubmitted", actors: [{ type: "actor", id: "alice" }] }),
+      observation({
+        id: "wrong_type",
+        at: 12,
+        type: "ReviewSubmitted",
+        actors: [{ type: "actor", id: "alice" }],
+      }),
     );
     // Only the row matching BOTH type AND actor may be returned.
     const result = await store.query({ types: ["DeployFinished"], actor: { id: "alice" } });
-    assert.deepEqual(result.map((o) => o.id), ["match"]);
+    assert.deepEqual(
+      result.map((o) => o.id),
+      ["match"],
+    );
     // A type+time compound as well.
     assert.deepEqual(
       (await store.query({ types: ["DeployFinished"], from: 11 })).map((o) => o.id),
@@ -150,14 +173,26 @@ export function observationStoreConformance(
   test(name("orders by time, limits, and breaks ties by insertion order"), async () => {
     const store = makeStore();
     for (const at of [10, 20, 30]) await store.put(observation({ id: `obs_${at}`, at }));
-    assert.deepEqual((await store.query({ order: "desc", limit: 2 })).map((o) => o.at), [30, 20]);
-    assert.deepEqual((await store.query({ order: "asc" })).map((o) => o.at), [10, 20, 30]);
+    assert.deepEqual(
+      (await store.query({ order: "desc", limit: 2 })).map((o) => o.at),
+      [30, 20],
+    );
+    assert.deepEqual(
+      (await store.query({ order: "asc" })).map((o) => o.at),
+      [10, 20, 30],
+    );
 
     const tie = makeStore();
     await tie.put(observation({ id: "first", at: 100 }));
     await tie.put(observation({ id: "second", at: 100 }));
-    assert.deepEqual((await tie.query({ order: "asc" })).map((o) => o.id), ["first", "second"]);
-    assert.deepEqual((await tie.query({ order: "desc" })).map((o) => o.id), ["second", "first"]);
+    assert.deepEqual(
+      (await tie.query({ order: "asc" })).map((o) => o.id),
+      ["first", "second"],
+    );
+    assert.deepEqual(
+      (await tie.query({ order: "desc" })).map((o) => o.id),
+      ["second", "first"],
+    );
   });
 
   test(name("rejects every malformed query bound"), async () => {
@@ -198,7 +233,10 @@ export function auditStoreConformance(label: string, makeStore: () => AuditStore
     await store.append(auditRecord(0, { eventId: "e1", stage: "validation" }));
     await store.append(auditRecord(1, { eventId: "e1", stage: "storage", observationId: "obs_1" }));
     await store.append(auditRecord(2, { eventId: "e2", stage: "validation" }));
-    assert.deepEqual((await store.list({ eventId: "e1" })).map((r) => r.sequence), [0, 1]);
+    assert.deepEqual(
+      (await store.list({ eventId: "e1" })).map((r) => r.sequence),
+      [0, 1],
+    );
     assert.equal((await store.list({ stage: "storage" })).length, 1);
     assert.equal((await store.list({ observationId: "obs_1" })).length, 1);
     // Compound: eventId AND stage together, not either.
@@ -239,8 +277,14 @@ export function rawEventArchiveConformance(
     // receivedAt round-trips on both the return value and the replay.
     assert.equal(a.receivedAt, 100);
     const all = await archive.replay();
-    assert.deepEqual(all.map((e) => (e.event as { n: number }).n), [0, 1]);
-    assert.deepEqual(all.map((e) => e.receivedAt), [100, 101]);
+    assert.deepEqual(
+      all.map((e) => (e.event as { n: number }).n),
+      [0, 1],
+    );
+    assert.deepEqual(
+      all.map((e) => e.receivedAt),
+      [100, 101],
+    );
     assert.equal(await archive.count(), 2);
   });
 
@@ -253,20 +297,23 @@ export function rawEventArchiveConformance(
     assert.equal(stored.nested.v, 1);
   });
 
-  test(name("replay honors fromSequence (inclusive) and limit, and rejects bad bounds"), async () => {
-    const archive = makeArchive();
-    const seqs: number[] = [];
-    for (let i = 0; i < 4; i++) seqs.push((await archive.archive({ i }, i)).sequence);
-    assert.deepEqual(
-      (await archive.replay({ fromSequence: seqs[2] as number })).map((e) => e.sequence),
-      seqs.slice(2),
-    );
-    assert.equal((await archive.replay({ limit: 1 })).length, 1);
-    await assert.rejects(() => archive.replay({ limit: -1 }), RangeError);
-    await assert.rejects(() => archive.replay({ limit: 1.5 }), RangeError);
-    await assert.rejects(() => archive.replay({ fromSequence: -1 }), RangeError);
-    await assert.rejects(() => archive.replay({ fromSequence: 1.5 }), RangeError);
-  });
+  test(
+    name("replay honors fromSequence (inclusive) and limit, and rejects bad bounds"),
+    async () => {
+      const archive = makeArchive();
+      const seqs: number[] = [];
+      for (let i = 0; i < 4; i++) seqs.push((await archive.archive({ i }, i)).sequence);
+      assert.deepEqual(
+        (await archive.replay({ fromSequence: seqs[2] as number })).map((e) => e.sequence),
+        seqs.slice(2),
+      );
+      assert.equal((await archive.replay({ limit: 1 })).length, 1);
+      await assert.rejects(() => archive.replay({ limit: -1 }), RangeError);
+      await assert.rejects(() => archive.replay({ limit: 1.5 }), RangeError);
+      await assert.rejects(() => archive.replay({ fromSequence: -1 }), RangeError);
+      await assert.rejects(() => archive.replay({ fromSequence: 1.5 }), RangeError);
+    },
+  );
 
   test(name("pruneBefore is an audit-safe prefix delete that never reuses sequences"), async () => {
     const archive = makeArchive();
@@ -274,7 +321,10 @@ export function rawEventArchiveConformance(
     for (let i = 0; i < 4; i++) seqs.push((await archive.archive({ i }, i)).sequence);
     const removed = await archive.pruneBefore(seqs[2] as number);
     assert.equal(removed, 2);
-    assert.deepEqual((await archive.replay()).map((e) => e.sequence), seqs.slice(2));
+    assert.deepEqual(
+      (await archive.replay()).map((e) => e.sequence),
+      seqs.slice(2),
+    );
     assert.equal(await archive.count(), 2);
     await assert.rejects(() => archive.pruneBefore(-1), RangeError);
 

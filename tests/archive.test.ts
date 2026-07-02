@@ -17,16 +17,28 @@ test("archive assigns contiguous sequences and replays in order", async () => {
   await archive.archive({ n: 1 }, 101);
   await archive.archive({ n: 2 }, 102);
   const all = await archive.replay();
-  assert.deepEqual(all.map((e) => e.sequence), [0, 1, 2]);
-  assert.deepEqual(all.map((e) => (e.event as { n: number }).n), [0, 1, 2]);
+  assert.deepEqual(
+    all.map((e) => e.sequence),
+    [0, 1, 2],
+  );
+  assert.deepEqual(
+    all.map((e) => (e.event as { n: number }).n),
+    [0, 1, 2],
+  );
   assert.equal(await archive.count(), 3);
 });
 
 test("replay honors fromSequence and limit", async () => {
   const archive = new InMemoryRawEventArchive();
   for (let i = 0; i < 5; i++) await archive.archive({ i }, i);
-  assert.deepEqual((await archive.replay({ fromSequence: 3 })).map((e) => e.sequence), [3, 4]);
-  assert.deepEqual((await archive.replay({ limit: 2 })).map((e) => e.sequence), [0, 1]);
+  assert.deepEqual(
+    (await archive.replay({ fromSequence: 3 })).map((e) => e.sequence),
+    [3, 4],
+  );
+  assert.deepEqual(
+    (await archive.replay({ limit: 2 })).map((e) => e.sequence),
+    [0, 1],
+  );
 });
 
 test("replay rejects malformed bounds", async () => {
@@ -46,7 +58,10 @@ test("pruneBefore removes the oldest prefix and preserves the suffix", async () 
   assert.equal(removed, 2); // 0 and 1 removed
   assert.equal(await archive.count(), 3);
   const remaining = await archive.replay();
-  assert.deepEqual(remaining.map((e) => e.sequence), [2, 3, 4]); // ordered suffix, unchanged ids
+  assert.deepEqual(
+    remaining.map((e) => e.sequence),
+    [2, 3, 4],
+  ); // ordered suffix, unchanged ids
 });
 
 test("pruneBefore never reuses a sequence for future appends", async () => {
@@ -58,7 +73,10 @@ test("pruneBefore never reuses a sequence for future appends", async () => {
   const next = await archive.archive({ i: 2 }, 2);
   assert.equal(next.sequence, 2); // monotonic counter, not reused from 0
   // A bookmark past the cut still works.
-  assert.deepEqual((await archive.replay({ fromSequence: 2 })).map((e) => e.sequence), [2]);
+  assert.deepEqual(
+    (await archive.replay({ fromSequence: 2 })).map((e) => e.sequence),
+    [2],
+  );
 });
 
 test("pruneBefore is a no-op below the floor and total above the ceiling", async () => {
@@ -109,7 +127,9 @@ test("the archive tapes every raw input, including rejected ones", async () => {
   });
   await observe.ingest(reviewEvent({ eventId: "ok" }));
   await observe.ingest({ not: "an event" }); // rejected (malformed envelope)
-  await observe.ingest(reviewEvent({ eventId: "bad", payload: { pullRequest: "p", decision: "x" } })); // rejected payload
+  await observe.ingest(
+    reviewEvent({ eventId: "bad", payload: { pullRequest: "p", decision: "x" } }),
+  ); // rejected payload
 
   assert.equal(await archive.count(), 3); // all three taped
   assert.equal(await observe.read.countObservations(), 1); // only the valid one stored
@@ -141,10 +161,7 @@ test("backfill: replay the archive through renormalize under a new version", asy
     rawEventArchive: archive,
     normalizationVersion: "1.0",
   });
-  await observe.ingestAll([
-    reviewEvent({ eventId: "a" }),
-    reviewEvent({ eventId: "b" }),
-  ]);
+  await observe.ingestAll([reviewEvent({ eventId: "a" }), reviewEvent({ eventId: "b" })]);
   const v1 = await observe.read.queryObservations({ order: "asc" });
 
   // Re-normalize the taped originals under a new version — pure, no storage.

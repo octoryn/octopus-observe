@@ -145,7 +145,11 @@ export class Normalizer {
       const resolved = resolve(ref);
       return resolved.attributes === undefined
         ? { type: resolved.type, id: resolved.id }
-        : { type: resolved.type, id: resolved.id, attributes: structuredClone(resolved.attributes) };
+        : {
+            type: resolved.type,
+            id: resolved.id,
+            attributes: structuredClone(resolved.attributes),
+          };
     });
   }
 }

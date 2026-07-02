@@ -39,9 +39,7 @@ export class PayloadChecker {
   }
 
   private read(field: string): unknown {
-    return Object.prototype.hasOwnProperty.call(this.obj, field)
-      ? this.obj[field]
-      : undefined;
+    return Object.prototype.hasOwnProperty.call(this.obj, field) ? this.obj[field] : undefined;
   }
 
   /** Require a non-empty string; records the value into attributes when valid. */

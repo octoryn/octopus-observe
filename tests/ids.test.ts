@@ -23,15 +23,9 @@ test("observation id changes with the event id and type", () => {
 test("encoding is injective across field boundaries", () => {
   // A shifted boundary between fields must not collide: ("A B","T") and
   // ("A","B T") would coincide under naive space-delimited concatenation.
-  assert.notEqual(
-    observationId("A B", "T", "1.0"),
-    observationId("A", "B T", "1.0"),
-  );
+  assert.notEqual(observationId("A B", "T", "1.0"), observationId("A", "B T", "1.0"));
   // A version string containing a space must not collide with a shifted type.
-  assert.notEqual(
-    observationId("e", "T", "1.0 beta"),
-    observationId("e", "T 1.0", "beta"),
-  );
+  assert.notEqual(observationId("e", "T", "1.0 beta"), observationId("e", "T 1.0", "beta"));
 });
 
 test("observation id is prefixed and hex", () => {

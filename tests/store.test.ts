@@ -1,9 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  InMemoryAuditStore,
-  InMemoryObservationStore,
-} from "../src/storage/memory.js";
+import { InMemoryAuditStore, InMemoryObservationStore } from "../src/storage/memory.js";
 import type { Observation } from "../src/index.js";
 import type { AuditRecord } from "../src/core/audit.js";
 

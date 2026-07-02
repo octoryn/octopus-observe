@@ -5,22 +5,11 @@ import type { JsonObject } from "./json.js";
  * these, so the fate of any input is fully explainable after the fact.
  */
 export type AuditStage =
-  | "validation"
-  | "normalization"
-  | "attribution"
-  | "dedupe"
-  | "rejection"
-  | "storage";
+  "validation" | "normalization" | "attribution" | "dedupe" | "rejection" | "storage";
 
 /** The outcome recorded for a stage. */
 export type AuditOutcome =
-  | "passed"
-  | "failed"
-  | "rejected"
-  | "unique"
-  | "duplicate"
-  | "stored"
-  | "skipped";
+  "passed" | "failed" | "rejected" | "unique" | "duplicate" | "stored" | "skipped";
 
 /**
  * An immutable audit record. Audit records are append-only observations *about

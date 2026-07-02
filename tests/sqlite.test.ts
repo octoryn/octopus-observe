@@ -46,7 +46,10 @@ test("Observe works end-to-end on SQLite stores (in-memory db)", async () => {
     assert.equal(await observe.read.countObservations(), 2);
 
     const reviews = await observe.read.queryObservations({ types: ["ReviewSubmitted"] });
-    assert.deepEqual(reviews.map((o) => o.sourceEventId), ["a"]);
+    assert.deepEqual(
+      reviews.map((o) => o.sourceEventId),
+      ["a"],
+    );
 
     const trail = await observe.read.queryAudit();
     assert.ok(verifyAuditChain(trail).ok);
@@ -94,12 +97,18 @@ test("SQLite query filters by actor and time window", async () => {
       }),
     );
     const alice = await stores.observations.query({ actor: { id: "alice" } });
-    assert.deepEqual(alice.map((o) => o.sourceEventId), ["a"]);
+    assert.deepEqual(
+      alice.map((o) => o.sourceEventId),
+      ["a"],
+    );
 
     const window = await stores.observations.query({
       from: Date.parse("2026-07-01T09:00:00Z"),
     });
-    assert.deepEqual(window.map((o) => o.sourceEventId), ["b"]);
+    assert.deepEqual(
+      window.map((o) => o.sourceEventId),
+      ["b"],
+    );
 
     await assert.rejects(() => stores.observations.query({ limit: -1 }), RangeError);
   } finally {
@@ -147,7 +156,9 @@ test("SQLite raw-event archive tapes, replays, and drives backfill", async () =>
     const taped = await stores.rawEvents.replay();
     assert.equal(taped.length, 2);
     // Sequence is an opaque, strictly-increasing ordinal (1-based in SQLite).
-    assert.ok((taped[0] as { sequence: number }).sequence < (taped[1] as { sequence: number }).sequence);
+    assert.ok(
+      (taped[0] as { sequence: number }).sequence < (taped[1] as { sequence: number }).sequence,
+    );
     assert.deepEqual(taped[1]?.event, { garbage: true });
 
     await assert.rejects(() => stores.rawEvents.replay({ limit: -1 }), RangeError);
@@ -185,7 +196,10 @@ test("SQLite pruneBefore is an audit-safe prefix delete that never reuses sequen
     assert.equal(removed, 2); // a and b pruned
     assert.equal(await stores.rawEvents.count(), 1);
     const remaining = await stores.rawEvents.replay();
-    assert.deepEqual(remaining.map((e) => e.sequence), [c.sequence]);
+    assert.deepEqual(
+      remaining.map((e) => e.sequence),
+      [c.sequence],
+    );
 
     // A later append gets a strictly greater sequence — never a pruned one.
     const d = await stores.rawEvents.archive({ i: 3 }, 3);

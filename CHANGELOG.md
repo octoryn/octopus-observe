@@ -1,9 +1,30 @@
+**English** | [简体中文](CHANGELOG.zh-CN.md)
+
 # Changelog
 
 All notable changes to Observe are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 semantic versioning once it reaches 1.0. Every release was hardened by an
 independent adversarial ("red-team") review before landing.
+
+## [0.7.0] — 2026-07-02
+
+### Changed
+- **License is now AGPL-3.0-or-later** (was MIT), aligning with the Octoryn
+  ecosystem. If you need a permissive license for embedding, raise it before
+  depending on this version.
+
+### Added
+- **Open-source release packaging** to the ecosystem standard: full
+  `package.json` metadata (author, repository, homepage, bugs, keywords),
+  bilingual docs (English canonical + `*.zh-CN.md` siblings with a language
+  switcher) for the README, CHANGELOG, and design doc, README badges, and
+  `SECURITY.md` / `CONTRIBUTING.md` / `CODE_OF_CONDUCT.md`.
+- **Lint + format tooling:** ESLint (flat config) and Prettier, with
+  `.editorconfig`, `.prettierrc.json`, `.nvmrc`, and `format` / `format:check` /
+  `lint` scripts. CI now runs format-check and lint alongside typecheck, test,
+  and build across Node 20 / 22 / 24. A `coverage` script uses Node's built-in
+  test coverage.
 
 ## [0.6.0] — 2026-07-02
 

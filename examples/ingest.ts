@@ -4,12 +4,7 @@
  *
  *   npm run example
  */
-import {
-  Observe,
-  exampleValidators,
-  fixedClock,
-  type ObservationEvent,
-} from "../src/index.js";
+import { Observe, exampleValidators, fixedClock, type ObservationEvent } from "../src/index.js";
 
 const events: (ObservationEvent | unknown)[] = [
   {
@@ -30,7 +25,12 @@ const events: (ObservationEvent | unknown)[] = [
     kind: "deploy.finished",
     occurredAt: "2026-07-01T10:15:00.000Z",
     source: { system: "ci", version: "v3" },
-    payload: { service: "observe-api", environment: "production", status: "failed", durationMs: 42000 },
+    payload: {
+      service: "observe-api",
+      environment: "production",
+      status: "failed",
+      durationMs: 42000,
+    },
     subjects: [{ type: "service", id: "observe-api" }],
   },
   // Re-delivery of evt-1 — deterministic id makes this an idempotent duplicate.
@@ -66,9 +66,13 @@ async function main(): Promise<void> {
   console.log("=== ingest results ===");
   for (const result of results) {
     if (result.status === "accepted" || result.status === "duplicate") {
-      console.log(`${result.status.padEnd(10)} ${result.observation.type} (${result.observation.id})`);
+      console.log(
+        `${result.status.padEnd(10)} ${result.observation.type} (${result.observation.id})`,
+      );
     } else if (result.status === "rejected") {
-      console.log(`${"rejected".padEnd(10)} ${result.rejection.reason}: ${result.rejection.message}`);
+      console.log(
+        `${"rejected".padEnd(10)} ${result.rejection.reason}: ${result.rejection.message}`,
+      );
     } else {
       console.log(`${"skipped".padEnd(10)} ${result.eventId}`);
     }

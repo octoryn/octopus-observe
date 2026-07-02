@@ -1,3 +1,5 @@
+**English** | [简体中文](DESIGN.zh-CN.md)
+
 # Observe — Architecture & Contracts
 
 Status: **v0.1** · Owner: Observe · Last updated: 2026-07-02

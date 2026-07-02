@@ -37,7 +37,13 @@ test("a new normalization version produces new, coexisting ids", () => {
 
 test("renormalize is deterministic under a fixed clock", () => {
   const events = [reviewEvent({ eventId: "a" }), reviewEvent({ eventId: "b" })];
-  const first = renormalize(events, { validators: exampleValidators, clock: fixedClock(FIXED_NOW) });
-  const second = renormalize(events, { validators: exampleValidators, clock: fixedClock(FIXED_NOW) });
+  const first = renormalize(events, {
+    validators: exampleValidators,
+    clock: fixedClock(FIXED_NOW),
+  });
+  const second = renormalize(events, {
+    validators: exampleValidators,
+    clock: fixedClock(FIXED_NOW),
+  });
   assert.deepEqual(first.observations, second.observations);
 });

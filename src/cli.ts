@@ -122,9 +122,7 @@ async function main(): Promise<number> {
     const audit = await observe.read.queryAudit();
     for (const record of audit) {
       const obs = record.observationId ? ` obs=${record.observationId}` : "";
-      process.stdout.write(
-        `  [${record.stage}/${record.outcome}] event=${record.eventId}${obs}\n`,
-      );
+      process.stdout.write(`  [${record.stage}/${record.outcome}] event=${record.eventId}${obs}\n`);
     }
   }
 

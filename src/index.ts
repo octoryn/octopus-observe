@@ -13,53 +13,30 @@
 
 // Pipeline entry point.
 export { Observe } from "./observe.js";
-export type {
-  ObserveOptions,
-  IngestResult,
-  UnknownKindPolicy,
-} from "./observe.js";
+export type { ObserveOptions, IngestResult, UnknownKindPolicy } from "./observe.js";
 
 // Core contracts.
 export type { ObservationEvent, EventSource } from "./core/event.js";
 export type { Observation, ObservationVersions } from "./core/observation.js";
 export type { TaggedRef, RawRef } from "./core/refs.js";
 export type { JsonValue, JsonObject, JsonPrimitive } from "./core/json.js";
-export type {
-  Rejection,
-  RejectionReason,
-  ValidationIssue,
-} from "./core/rejection.js";
-export type {
-  AuditRecord,
-  AuditContent,
-  AuditStage,
-  AuditOutcome,
-} from "./core/audit.js";
+export type { Rejection, RejectionReason, ValidationIssue } from "./core/rejection.js";
+export type { AuditRecord, AuditContent, AuditStage, AuditOutcome } from "./core/audit.js";
 export type { Result } from "./core/result.js";
 export { ok, err } from "./core/result.js";
 export { stableStringify } from "./core/json.js";
 
 // Tamper-evident audit chain.
-export {
-  GENESIS_HASH,
-  computeAuditHash,
-  verifyAuditChain,
-} from "./core/audit-chain.js";
+export { GENESIS_HASH, computeAuditHash, verifyAuditChain } from "./core/audit-chain.js";
 export type { ChainVerification, AuditSecret } from "./core/audit-chain.js";
 export { exportAuditNdjson } from "./audit/export.js";
 
 // Observation content integrity.
-export {
-  computeObservationHash,
-  verifyObservation,
-} from "./core/observation-integrity.js";
+export { computeObservationHash, verifyObservation } from "./core/observation-integrity.js";
 export type { ObservationContent } from "./core/observation-integrity.js";
 
 // Versions.
-export {
-  NORMALIZATION_VERSION,
-  SUPPORTED_ENVELOPE_VERSIONS,
-} from "./core/versions.js";
+export { NORMALIZATION_VERSION, SUPPORTED_ENVELOPE_VERSIONS } from "./core/versions.js";
 export type { EnvelopeVersion } from "./core/versions.js";
 
 // Time.

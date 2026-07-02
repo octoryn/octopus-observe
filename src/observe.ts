@@ -9,10 +9,7 @@ import { type Resolver, identityResolver } from "./normalize/resolver.js";
 import { Normalizer } from "./normalize/normalizer.js";
 import { type TimestampPolicy, DEFAULT_TIMESTAMP_POLICY } from "./normalize/timestamp.js";
 import type { AuditSecret } from "./core/audit-chain.js";
-import {
-  InMemoryAuditStore,
-  InMemoryObservationStore,
-} from "./storage/memory.js";
+import { InMemoryAuditStore, InMemoryObservationStore } from "./storage/memory.js";
 import type { AuditStore, ObservationStore, RawEventArchive } from "./storage/store.js";
 import { AuditEmitter } from "./audit/emitter.js";
 import { ReadApi } from "./api/read.js";
@@ -122,8 +119,7 @@ export class Observe {
       resolver: options.resolver ?? identityResolver,
       clock,
       normalizationVersion: options.normalizationVersion ?? NORMALIZATION_VERSION,
-      supportedEnvelopeVersions:
-        options.supportedEnvelopeVersions ?? SUPPORTED_ENVELOPE_VERSIONS,
+      supportedEnvelopeVersions: options.supportedEnvelopeVersions ?? SUPPORTED_ENVELOPE_VERSIONS,
       timestampPolicy: options.timestampPolicy ?? DEFAULT_TIMESTAMP_POLICY,
       ...(options.integritySecret !== undefined
         ? { integritySecret: options.integritySecret }
@@ -257,9 +253,10 @@ export class Observe {
   private rejectionDetail(rejection: Rejection): JsonObject {
     const detail: JsonObject = { reason: rejection.reason, message: rejection.message };
     if (rejection.issues !== undefined) {
-      detail["issues"] = rejection.issues.map(
-        (issue): JsonObject => ({ path: issue.path, message: issue.message }),
-      );
+      detail["issues"] = rejection.issues.map((issue): JsonObject => ({
+        path: issue.path,
+        message: issue.message,
+      }));
     }
     return detail;
   }

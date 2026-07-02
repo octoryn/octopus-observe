@@ -133,8 +133,7 @@ export class SqliteObservationStore implements ObservationStore {
 
   get(id: string): Promise<Observation | undefined> {
     const row = this.db.prepare("SELECT data FROM observations WHERE id = ?").get(id) as
-      | { data: string }
-      | undefined;
+      { data: string } | undefined;
     return Promise.resolve(row === undefined ? undefined : this.hydrate(row.data));
   }
 
@@ -270,8 +269,7 @@ export class SqliteAuditStore implements AuditStore {
 
   tail(): Promise<AuditRecord | undefined> {
     const row = this.db.prepare("SELECT data FROM audit ORDER BY seq DESC LIMIT 1").get() as
-      | { data: string }
-      | undefined;
+      { data: string } | undefined;
     return Promise.resolve(
       row === undefined ? undefined : deepFreeze(JSON.parse(row.data) as AuditRecord),
     );

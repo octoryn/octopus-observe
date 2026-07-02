@@ -1,8 +1,9 @@
 {
   "name": "@octopus/observe",
-  "version": "0.6.0",
-  "description": "Standalone observation intake and normalization: raw external events into trusted, canonical, immutable observations.",
-  "license": "MIT",
+  "version": "0.7.0",
+  "description": "Observe: standalone, governed, auditable intake and normalization — raw external events into trusted, canonical, immutable observations.",
+  "license": "AGPL-3.0-or-later",
+  "author": "Octoryn",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -10,6 +11,26 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/octoryn/octopus-observe.git"
+  },
+  "homepage": "https://github.com/octoryn/octopus-observe#readme",
+  "bugs": {
+    "url": "https://github.com/octoryn/octopus-observe/issues"
+  },
+  "keywords": [
+    "observation",
+    "normalization",
+    "intake",
+    "events",
+    "audit",
+    "tamper-evident",
+    "provenance",
+    "ai-native",
+    "octopus",
+    "octoryn"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -24,35 +45,39 @@
     "./conformance": {
       "types": "./dist/conformance.d.ts",
       "default": "./dist/conformance.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "bin": {
     "observe": "./dist/cli.js"
   },
   "files": [
     "dist",
+    "docs",
     "README.md",
     "CHANGELOG.md",
-    "docs"
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
+    "coverage": "node --import tsx --test --experimental-test-coverage tests/*.test.ts",
     "example": "tsx examples/ingest.ts",
     "cli": "tsx src/cli.ts",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"examples/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"examples/**/*.ts\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prepublishOnly": "npm run typecheck && npm run format:check && npm run lint && npm test && npm run build"
   },
-  "keywords": [
-    "observation",
-    "normalization",
-    "intake",
-    "events",
-    "octopus"
-  ],
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
     "@types/node": "^22.10.0",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
     "tsx": "^4.22.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.19.0"
   }
 }

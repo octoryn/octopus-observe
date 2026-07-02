@@ -1,4 +1,12 @@
+**English** | [简体中文](README.zh-CN.md)
+
 # Observe
+
+[![CI](https://github.com/octoryn/octopus-observe/actions/workflows/ci.yml/badge.svg)](https://github.com/octoryn/octopus-observe/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/octoryn/octopus-observe?sort=semver)](https://github.com/octoryn/octopus-observe/releases/latest)
+[![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](.nvmrc)
+[![Zero runtime deps](https://img.shields.io/badge/runtime%20deps-0-success.svg)](package.json)
 
 > Standalone observation intake and normalization. Observe turns raw external
 > events into **trusted, canonical, immutable observations** — and nothing more.

@@ -20,10 +20,7 @@ export type ObservationContent = Omit<Observation, "integrity">;
  * build must re-verify under another. Any change is a breaking change for
  * previously-stored observations.
  */
-export function computeObservationHash(
-  content: ObservationContent,
-  secret?: AuditSecret,
-): string {
+export function computeObservationHash(content: ObservationContent, secret?: AuditSecret): string {
   // Explicit field allowlist (not a structural spread), so a future field added
   // to Observation cannot silently enter this frozen wire contract, and an extra
   // enumerable property on `content` cannot change the hash.
