@@ -11,6 +11,10 @@
 > Standalone observation intake and normalization. Observe turns raw external
 > events into **trusted, canonical, immutable observations** — and nothing more.
 
+> **Part of [Octopus Core](https://github.com/octoryn) — the open infrastructure stack for governed AI.** One job per repo, along the agent lifecycle: [Scout](https://github.com/octoryn/octopus-scout) · [Observe](https://github.com/octoryn/octopus-observe) · [Experience](https://github.com/octoryn/octopus-experience) · [Blackboard](https://github.com/octoryn/octopus-blackboard) · [Runtime](https://github.com/octoryn/octopus-runtime) · [Replay](https://github.com/octoryn/octopus-replay) — with [Inspect](https://github.com/octoryn/octopus-inspect) governing every stage.
+>
+> **This repo — Observe · Observe:** Turn untrusted events into trusted observations.
+
 ```
 Raw event → Validation → Normalization → Attribution → Deduplication
           → Canonical observation → Storage → Read API
