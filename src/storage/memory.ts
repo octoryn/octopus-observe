@@ -1,0 +1,143 @@
+import type { Observation } from "../core/observation.js";
+import type { TaggedRef } from "../core/refs.js";
+import type { AuditRecord } from "../core/audit.js";
+import type {
+  AuditQuery,
+  AuditStore,
+  ObservationQuery,
+  ObservationStore,
+  RefMatch,
+} from "./store.js";
+
+function refMatches(refs: readonly TaggedRef[], match: RefMatch): boolean {
+  return refs.some(
+    (ref) => ref.id === match.id && (match.type === undefined || ref.type === match.type),
+  );
+}
+
+/**
+ * Reject malformed query bounds loudly rather than silently returning wrong
+ * results. A `NaN` bound (e.g. from `Date.parse` of bad input) would otherwise
+ * be treated as "no bound", and a negative `limit` would drop rows from the
+ * end — both silent data-correctness hazards for a trusted read path.
+ */
+function validateQuery(query: ObservationQuery): void {
+  for (const key of ["from", "to"] as const) {
+    const value = query[key];
+    if (value !== undefined && !Number.isFinite(value)) {
+      throw new RangeError(`ObservationQuery.${key} must be a finite number`);
+    }
+  }
+  if (query.limit !== undefined && (!Number.isInteger(query.limit) || query.limit < 0)) {
+    throw new RangeError("ObservationQuery.limit must be a non-negative integer");
+  }
+}
+
+function observationMatches(observation: Observation, query: ObservationQuery): boolean {
+  if (query.types !== undefined && !query.types.includes(observation.type)) {
+    return false;
+  }
+  if (query.from !== undefined && observation.at < query.from) {
+    return false;
+  }
+  if (query.to !== undefined && observation.at >= query.to) {
+    return false;
+  }
+  if (query.actor !== undefined && !refMatches(observation.actors, query.actor)) {
+    return false;
+  }
+  if (query.subject !== undefined && !refMatches(observation.subjects, query.subject)) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * In-memory {@link ObservationStore}.
+ *
+ * This is a first-class implementation, not a test double: it is what makes
+ * Observe usable with no external dependency. Insertion order is preserved as a
+ * stable tiebreaker so that queries are deterministic when timestamps collide.
+ */
+export class InMemoryObservationStore implements ObservationStore {
+  private readonly byId = new Map<string, Observation>();
+  /** Insertion sequence per id, for a stable secondary sort. */
+  private readonly sequence = new Map<string, number>();
+  private next = 0;
+
+  has(id: string): Promise<boolean> {
+    return Promise.resolve(this.byId.has(id));
+  }
+
+  put(observation: Observation): Promise<void> {
+    if (this.byId.has(observation.id)) {
+      return Promise.reject(
+        new Error(`append-only violation: observation ${observation.id} already stored`),
+      );
+    }
+    this.byId.set(observation.id, observation);
+    this.sequence.set(observation.id, this.next++);
+    return Promise.resolve();
+  }
+
+  get(id: string): Promise<Observation | undefined> {
+    return Promise.resolve(this.byId.get(id));
+  }
+
+  query(query: ObservationQuery = {}): Promise<readonly Observation[]> {
+    try {
+      validateQuery(query);
+    } catch (error) {
+      return Promise.reject(error as Error);
+    }
+    const order = query.order ?? "asc";
+    const direction = order === "asc" ? 1 : -1;
+
+    const results = [...this.byId.values()]
+      .filter((observation) => observationMatches(observation, query))
+      .sort((a, b) => {
+        if (a.at !== b.at) {
+          return (a.at - b.at) * direction;
+        }
+        const seqA = this.sequence.get(a.id) ?? 0;
+        const seqB = this.sequence.get(b.id) ?? 0;
+        return (seqA - seqB) * direction;
+      });
+
+    const limited = query.limit === undefined ? results : results.slice(0, query.limit);
+    return Promise.resolve(limited);
+  }
+
+  count(): Promise<number> {
+    return Promise.resolve(this.byId.size);
+  }
+}
+
+/** In-memory {@link AuditStore}. Records are appended and read in order. */
+export class InMemoryAuditStore implements AuditStore {
+  private readonly records: AuditRecord[] = [];
+
+  append(record: AuditRecord): Promise<void> {
+    this.records.push(record);
+    return Promise.resolve();
+  }
+
+  list(query: AuditQuery = {}): Promise<readonly AuditRecord[]> {
+    let results = this.records.filter((record) => {
+      if (query.eventId !== undefined && record.eventId !== query.eventId) {
+        return false;
+      }
+      if (query.observationId !== undefined && record.observationId !== query.observationId) {
+        return false;
+      }
+      if (query.stage !== undefined && record.stage !== query.stage) {
+        return false;
+      }
+      return true;
+    });
+    if (query.limit !== undefined) {
+      results = results.slice(0, query.limit);
+    }
+    return Promise.resolve(results);
+  }
+}
