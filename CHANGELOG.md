@@ -7,6 +7,14 @@ All notable changes to Observe are documented here. The format follows
 semantic versioning once it reaches 1.0. Every release was hardened by an
 independent adversarial ("red-team") review before landing.
 
+## [0.7.1] — 2026-07-02
+
+### Fixed
+- Docs-only republish so the **npm-rendered README reflects the Apache-2.0**
+  license section corrected in 0.7.0. npm renders the README from the published
+  tarball, which only refreshes on a new version — 0.7.0 shipped with the old
+  `MIT` "License" section.
+
 ## [0.7.0] — 2026-07-02
 
 ### Changed
