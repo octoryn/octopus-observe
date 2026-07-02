@@ -35,7 +35,7 @@ npm run build          # 产出 dist/
   信号。跨越这些边界的 PR,无论质量如何都会被拒绝。
 - **测试:** 新行为需要测试,且必须自洽(无网络、独立临时目录、用后清理)。用注入的
   `Clock`(`fixedClock`)保证确定性 —— 断言中绝不使用真实时钟时间。
-- **新的存储 adapter?** 用一致性套件证明它:从 `@octopus/observe/conformance`
+- **新的存储 adapter?** 用一致性套件证明它:从 `octopus-observe/conformance`
   调用 `storeConformance("你的后端", { observations: () => fresh() })`。它天生
   对抗 —— 不完整的实现会失败。
 

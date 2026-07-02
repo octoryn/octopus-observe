@@ -50,7 +50,7 @@ Node ≥ 22 上可用。
 ## 快速上手 (Quickstart)
 
 ```ts
-import { Observe, exampleValidators } from "@octopus/observe";
+import { Observe, exampleValidators } from "octopus-observe";
 
 const observe = new Observe({ validators: exampleValidators });
 
@@ -94,8 +94,8 @@ npm run cli -- events.ndjson --audit
 cat events.ndjson | npm run cli -- --audit
 npm run cli -- --json          # machine-readable output
 
-# After building, the `observe` bin is available:
-node dist/cli.js events.ndjson
+# After building, the `octopus-observe` bin is available:
+octopus-observe events.ndjson
 ```
 
 若有任何事件被拒绝 (rejected)，退出码为 `1`，否则为 `0`。
@@ -106,7 +106,7 @@ node dist/cli.js events.ndjson
 转化为规范属性：
 
 ```ts
-import { PayloadChecker, type Validator } from "@octopus/observe";
+import { PayloadChecker, type Validator } from "octopus-observe";
 
 const mergeValidator: Validator = {
   kind: "pr.merged",
@@ -130,8 +130,8 @@ const observe = new Observe({ validators: [mergeValidator] });
 核心库时永远不会加载实验性的 `node:sqlite`），且**不增加任何 npm 依赖**：
 
 ```ts
-import { Observe, exampleValidators } from "@octopus/observe";
-import { createSqliteStores } from "@octopus/observe/sqlite";
+import { Observe, exampleValidators } from "octopus-observe";
+import { createSqliteStores } from "octopus-observe/sqlite";
 
 const stores = createSqliteStores("./observe.db"); // or ":memory:"
 const observe = new Observe({
@@ -153,7 +153,7 @@ stores.close();
 `hash`）。任何编辑、插入、删除或重排都会将其打断：
 
 ```ts
-import { verifyAuditChain, exportAuditNdjson } from "@octopus/observe";
+import { verifyAuditChain, exportAuditNdjson } from "octopus-observe";
 
 const trail = await observe.read.queryAudit();
 const check = verifyAuditChain(trail);          // { ok: true } or { ok: false, brokenAt, reason }
@@ -178,7 +178,7 @@ verifyAuditChain(await observe.read.queryAudit(), process.env.AUDIT_KEY);
 的 `id`：
 
 ```ts
-import { verifyObservation } from "@octopus/observe";
+import { verifyObservation } from "octopus-observe";
 
 const obs = await observe.read.getObservation(id);
 verifyObservation(obs); // false if any field was tampered with
@@ -196,7 +196,7 @@ verifyObservation(obs); // false if any field was tampered with
 的，且归档只保存原始输入，绝不保存观测记录）：
 
 ```ts
-import { Observe, InMemoryRawEventArchive } from "@octopus/observe";
+import { Observe, InMemoryRawEventArchive } from "octopus-observe";
 // or use the durable one: createSqliteStores(...).rawEvents
 
 const archive = new InMemoryRawEventArchive();
@@ -220,7 +220,7 @@ const removed = await archive.pruneBefore(cutSequence);
 (replay) 通过它，然后 `put` 结果：
 
 ```ts
-import { renormalize } from "@octopus/observe";
+import { renormalize } from "octopus-observe";
 
 const archived = await archive.replay();
 const { observations, rejections } = renormalize(
@@ -240,7 +240,7 @@ const { observations, rejections } = renormalize(
 审计安全的裁剪 (pruning)。在一个 `node --test` 文件中将它指向你的工厂函数：
 
 ```ts
-import { storeConformance } from "@octopus/observe/conformance";
+import { storeConformance } from "octopus-observe/conformance";
 import { MyPostgresObservationStore } from "./my-adapter.js";
 
 storeConformance("postgres", {

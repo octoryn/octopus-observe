@@ -16,8 +16,8 @@
  * Usage (in a test file run under `node --test`):
  *
  * ```ts
- * import { storeConformance } from "@octopus/observe/conformance";
- * import { InMemoryObservationStore } from "@octopus/observe";
+ * import { storeConformance } from "octopus-observe/conformance";
+ * import { InMemoryObservationStore } from "octopus-observe";
  *
  * storeConformance("in-memory", {
  *   observations: () => new InMemoryObservationStore(),

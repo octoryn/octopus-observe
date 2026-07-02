@@ -12,6 +12,10 @@ independent adversarial ("red-team") review before landing.
 ### Changed
 - **License is now Apache-2.0** (was MIT) — a permissive, patent-grant license
   chosen for broad embeddability of this library.
+- **Package name is `octopus-observe`** (unscoped), matching the Octoryn
+  ecosystem convention (e.g. `octopus-scout`). Imports are `octopus-observe`,
+  `octopus-observe/sqlite`, `octopus-observe/conformance`; the CLI bin is
+  `octopus-observe`.
 
 ### Added
 - **Open-source release packaging** to the ecosystem standard: full
@@ -59,7 +63,7 @@ independent adversarial ("red-team") review before landing.
 ## [0.4.0] — 2026-07-02
 
 ### Added
-- **Storage conformance suite** (`@octopus/observe/conformance`): a reusable,
+- **Storage conformance suite** (`octopus-observe/conformance`): a reusable,
   adversarial contract test battery for `ObservationStore` / `AuditStore` /
   `RawEventArchive`, so any third-party adapter can prove parity rather than
   being trusted on faith. Run against the in-memory and SQLite backends in-repo.
@@ -91,7 +95,7 @@ independent adversarial ("red-team") review before landing.
 
 ### Changed
 - The SQLite adapter now **lazily loads** `node:sqlite` (type-only import at
-  module scope). Importing `@octopus/observe/sqlite` on a runtime without it
+  module scope). Importing `octopus-observe/sqlite` on a runtime without it
   (Node < 22.5) no longer throws at load — the error surfaces only when a store
   is created — so the full test suite runs on Node 20 with the SQLite suite
   auto-skipping.
@@ -115,7 +119,7 @@ independent adversarial ("red-team") review before landing.
 ## [0.1.0] — 2026-07-02
 
 ### Added
-- **SQLite persistence adapter** (`@octopus/observe/sqlite`) on Node's built-in
+- **SQLite persistence adapter** (`octopus-observe/sqlite`) on Node's built-in
   `node:sqlite` — zero npm dependencies, isolated from the core entry.
 - **Strict RFC 3339 timestamps** with a mandatory timezone offset by default
   (region-independent canonical `at`); `"lenient"` opt-out.

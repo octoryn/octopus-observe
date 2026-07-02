@@ -85,7 +85,7 @@ export {
   assertValidReplayQuery,
   assertValidPruneSequence,
 } from "./storage/store.js";
-// Note: the SQLite adapter is available from the "@octopus/observe/sqlite"
+// Note: the SQLite adapter is available from the "octopus-observe/sqlite"
 // entry point. It is intentionally not re-exported here so importing the core
 // never loads the experimental built-in SQLite module.
 

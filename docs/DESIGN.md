@@ -193,7 +193,7 @@ doubles — they are what make Observe usable with no external dependency.
 (`NaN` / negative limit) are rejected loudly rather than silently returning
 wrong results (`assertValidObservationQuery`, shared by all adapters).
 
-A **SQLite adapter** ships in-repo at the `@octopus/observe/sqlite` entry point
+A **SQLite adapter** ships in-repo at the `octopus-observe/sqlite` entry point
 (`createSqliteStores(location)`). It is built on Node's built-in `node:sqlite`,
 so it adds **no npm dependency**; that module is experimental and is loaded only
 when this adapter is imported, keeping the core entry free of it. It preserves
@@ -397,7 +397,7 @@ Choices made for v0, recorded so they stay intentional:
 
 ## 10. Module layout
 
-Single package, `@octopus/observe`. One responsibility per module; dependencies
+Single package, `octopus-observe`. One responsibility per module; dependencies
 point inward toward `core`, which has none.
 
 ```
@@ -427,7 +427,7 @@ src/
   storage/       # interfaces + adapters
     store.ts         # interfaces + shared query validation
     memory.ts        # in-memory default
-    sqlite.ts        # SQLite adapter (@octopus/observe/sqlite)
+    sqlite.ts        # SQLite adapter (octopus-observe/sqlite)
   audit/
     emitter.ts       # stamps, hash-chains & writes audit records
     export.ts        # NDJSON / SIEM export
@@ -450,7 +450,7 @@ Exactly three, and no more. Everything else is closed.
 2. **Storage adapters** (`storage/store.ts`) — swap persistence for the
    observation store, audit store, and the optional `RawEventArchive` port. Any
    adapter can prove it satisfies the contract with the reusable conformance
-   suite (`@octopus/observe/conformance`), which the in-memory and SQLite
+   suite (`octopus-observe/conformance`), which the in-memory and SQLite
    backends both pass; it is adversarial (full-record fidelity, ANDed filters,
    empty-store reads, append-only survival) so partial implementations fail.
 3. **Resolver** (`normalize/resolver.ts`) — cross-source identity resolution.

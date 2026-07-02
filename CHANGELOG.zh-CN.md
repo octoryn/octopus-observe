@@ -12,6 +12,9 @@ Observe 的所有重要变更均记录于此。格式遵循
 ### Changed
 - **许可证改为 Apache-2.0**（原为 MIT）—— 一个带专利授权的宽松许可证，为让这个库
   能被广泛嵌入而选择。
+- **包名改为 `octopus-observe`**（非 scope），与 Octoryn 生态约定一致
+  （如 `octopus-scout`）。导入为 `octopus-observe`、`octopus-observe/sqlite`、
+  `octopus-observe/conformance`；CLI bin 为 `octopus-observe`。
 
 ### Added
 - **开源发布打包（open-source release packaging）**，对齐生态标准：完整的
@@ -57,7 +60,7 @@ Observe 的所有重要变更均记录于此。格式遵循
 ## [0.4.0] — 2026-07-02
 
 ### Added
-- **存储一致性测试套件（storage conformance suite）**（`@octopus/observe/conformance`）：一套可复用的、
+- **存储一致性测试套件（storage conformance suite）**（`octopus-observe/conformance`）：一套可复用的、
   对抗性的针对 `ObservationStore` / `AuditStore` /
   `RawEventArchive` 的契约测试组，任何第三方适配器都可以借此证明其对等性，而无需
   被无条件信任。可在仓库内针对内存后端与 SQLite 后端运行。
@@ -90,7 +93,7 @@ Observe 的所有重要变更均记录于此。格式遵循
 ### Changed
 - SQLite 适配器现在**惰性加载（lazily loads）** `node:sqlite`（在模块作用域仅做
   类型导入）。在不具备该模块的运行时（Node < 22.5）上导入
-  `@octopus/observe/sqlite` 不再在加载时抛出——错误仅在创建存储
+  `octopus-observe/sqlite` 不再在加载时抛出——错误仅在创建存储
   时才浮现——因此完整测试套件可在 Node 20 上运行，同时 SQLite 测试组
   自动跳过。
 
@@ -113,7 +116,7 @@ Observe 的所有重要变更均记录于此。格式遵循
 ## [0.1.0] — 2026-07-02
 
 ### Added
-- **SQLite 持久化适配器**（`@octopus/observe/sqlite`），基于 Node 内置的
+- **SQLite 持久化适配器**（`octopus-observe/sqlite`），基于 Node 内置的
   `node:sqlite`——零 npm 依赖，与核心入口隔离。
 - **严格的 RFC 3339 时间戳**，默认要求强制的时区偏移量
   （与地域无关的规范化 `at`）；提供 `"lenient"` 退出选项。

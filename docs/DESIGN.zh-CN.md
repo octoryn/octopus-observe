@@ -121,7 +121,7 @@ Observe 从不枚举 actor/subject 种类的集合——那会把核心耦合到
 
 内存实现随仓库一同发布，且是**一等公民**，而非测试替身——正是它们让 Observe 在没有任何外部依赖时也能使用。`ObservationQuery` 支持按类型（一个或多个）、时间窗口（`from` 包含、`to` 不包含）、actor/subject ref 过滤，外加排序与限量；格式错误的边界（`NaN` / 负 limit）会被高声拒绝，而不是悄悄返回错误结果（`assertValidObservationQuery`，由所有适配器共享）。
 
-一个 **SQLite 适配器**随仓库一同发布，位于 `@octopus/observe/sqlite` 入口点（`createSqliteStores(location)`）。它构建在 Node 内置的 `node:sqlite` 之上，因此**不增加任何 npm 依赖**；该模块是实验性的，且仅在导入此适配器时才加载，从而使核心入口不受其牵累。它保留了每一条不变量：仅追加（对已存在 id 的 `put` 会抛出）、不可变（观测在读取时被深度冻结）、审计记录按追加顺序返回，从而使哈希链（§7）在进程重启之间保持可验证。更多后端（Postgres……）都是满足相同接口的适配器。
+一个 **SQLite 适配器**随仓库一同发布，位于 `octopus-observe/sqlite` 入口点（`createSqliteStores(location)`）。它构建在 Node 内置的 `node:sqlite` 之上，因此**不增加任何 npm 依赖**；该模块是实验性的，且仅在导入此适配器时才加载，从而使核心入口不受其牵累。它保留了每一条不变量：仅追加（对已存在 id 的 `put` 会抛出）、不可变（观测在读取时被深度冻结）、审计记录按追加顺序返回，从而使哈希链（§7）在进程重启之间保持可验证。更多后端（Postgres……）都是满足相同接口的适配器。
 
 ### 6.1 原始事件归档 (Raw-event archive)（可选、独立端口）
 
@@ -207,7 +207,7 @@ Observe 从不枚举 actor/subject 种类的集合——那会把核心耦合到
 
 ## 10. 模块布局
 
-单一包，`@octopus/observe`。每个模块一项职责；依赖向内指向 `core`，而 `core` 没有依赖。
+单一包，`octopus-observe`。每个模块一项职责；依赖向内指向 `core`，而 `core` 没有依赖。
 
 ```
 src/
@@ -236,7 +236,7 @@ src/
   storage/       # interfaces + adapters
     store.ts         # interfaces + shared query validation
     memory.ts        # in-memory default
-    sqlite.ts        # SQLite adapter (@octopus/observe/sqlite)
+    sqlite.ts        # SQLite adapter (octopus-observe/sqlite)
   audit/
     emitter.ts       # stamps, hash-chains & writes audit records
     export.ts        # NDJSON / SIEM export
@@ -256,7 +256,7 @@ src/
 恰好三个，不多不少。其余一切都是封闭的。
 
 1. **校验器 (Validators)** (`validate/`) ——新增一种输入 kind / schema 版本。
-2. **存储适配器 (Storage adapters)** (`storage/store.ts`) ——为观测存储、审计存储以及可选的 `RawEventArchive` 端口替换持久化。任何适配器都能用可复用的一致性套件 (conformance suite) (`@octopus/observe/conformance`) 证明它满足契约——内存与 SQLite 后端都通过该套件；它是对抗性的（全记录保真、AND 过滤、空存储读取、仅追加存活性），因此不完整的实现会失败。
+2. **存储适配器 (Storage adapters)** (`storage/store.ts`) ——为观测存储、审计存储以及可选的 `RawEventArchive` 端口替换持久化。任何适配器都能用可复用的一致性套件 (conformance suite) (`octopus-observe/conformance`) 证明它满足契约——内存与 SQLite 后端都通过该套件；它是对抗性的（全记录保真、AND 过滤、空存储读取、仅追加存活性），因此不完整的实现会失败。
 3. **解析器 (Resolver)** (`normalize/resolver.ts`) ——跨来源身份解析。
 
 连接器 (Connectors) 在此明确*不是*扩展点；它们位于仓库之外。边界是 `ObservationEvent`。

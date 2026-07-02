@@ -53,7 +53,7 @@ opt out.
 ## Quickstart
 
 ```ts
-import { Observe, exampleValidators } from "@octopus/observe";
+import { Observe, exampleValidators } from "octopus-observe";
 
 const observe = new Observe({ validators: exampleValidators });
 
@@ -97,8 +97,8 @@ npm run cli -- events.ndjson --audit
 cat events.ndjson | npm run cli -- --audit
 npm run cli -- --json          # machine-readable output
 
-# After building, the `observe` bin is available:
-node dist/cli.js events.ndjson
+# After building, the `octopus-observe` bin is available:
+octopus-observe events.ndjson
 ```
 
 Exit code is `1` if any event was rejected, `0` otherwise.
@@ -109,7 +109,7 @@ A `Validator` owns one `(kind, schemaVersion)` pair and turns an untrusted
 payload into canonical attributes:
 
 ```ts
-import { PayloadChecker, type Validator } from "@octopus/observe";
+import { PayloadChecker, type Validator } from "octopus-observe";
 
 const mergeValidator: Validator = {
   kind: "pr.merged",
@@ -134,8 +134,8 @@ separate entry point (so importing the core never loads the experimental
 `node:sqlite`) and adds **no npm dependency**:
 
 ```ts
-import { Observe, exampleValidators } from "@octopus/observe";
-import { createSqliteStores } from "@octopus/observe/sqlite";
+import { Observe, exampleValidators } from "octopus-observe";
+import { createSqliteStores } from "octopus-observe/sqlite";
 
 const stores = createSqliteStores("./observe.db"); // or ":memory:"
 const observe = new Observe({
@@ -158,7 +158,7 @@ Every event's audit records form a **hash chain** (`sequence`, `previousHash`,
 `hash`). Any edit, insertion, deletion, or reordering breaks it:
 
 ```ts
-import { verifyAuditChain, exportAuditNdjson } from "@octopus/observe";
+import { verifyAuditChain, exportAuditNdjson } from "octopus-observe";
 
 const trail = await observe.read.queryAudit();
 const check = verifyAuditChain(trail);          // { ok: true } or { ok: false, brokenAt, reason }
@@ -184,7 +184,7 @@ observation altered after the fact (e.g. an attribute edited directly in the DB)
 is detectable — independently of the deterministic `id`:
 
 ```ts
-import { verifyObservation } from "@octopus/observe";
+import { verifyObservation } from "octopus-observe";
 
 const obs = await observe.read.getObservation(id);
 verifyObservation(obs); // false if any field was tampered with
@@ -204,7 +204,7 @@ is byte-identical whether or not an archive is attached, and the archive holds
 raw input, never observations):
 
 ```ts
-import { Observe, InMemoryRawEventArchive } from "@octopus/observe";
+import { Observe, InMemoryRawEventArchive } from "octopus-observe";
 // or use the durable one: createSqliteStores(...).rawEvents
 
 const archive = new InMemoryRawEventArchive();
@@ -228,7 +228,7 @@ rather than rewriting history. `renormalize` is the pure, dry-runnable primitive
 — replay the archive (or an upstream source) through it, then `put` the results:
 
 ```ts
-import { renormalize } from "@octopus/observe";
+import { renormalize } from "octopus-observe";
 
 const archived = await archive.replay();
 const { observations, rejections } = renormalize(
@@ -250,7 +250,7 @@ semantics, and audit-safe pruning. Point it at your factories in a
 `node --test` file:
 
 ```ts
-import { storeConformance } from "@octopus/observe/conformance";
+import { storeConformance } from "octopus-observe/conformance";
 import { MyPostgresObservationStore } from "./my-adapter.js";
 
 storeConformance("postgres", {

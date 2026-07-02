@@ -40,7 +40,7 @@ npm run build          # emits dist/
   determinism — never wall-clock time in assertions.
 - **New storage adapter?** Prove it with the conformance suite:
   `storeConformance("your-backend", { observations: () => fresh() })` from
-  `@octopus/observe/conformance`. It is adversarial by design — a partial
+  `octopus-observe/conformance`. It is adversarial by design — a partial
   implementation fails.
 
 ## Project layout

@@ -3,12 +3,12 @@ import { readFile } from "node:fs/promises";
 import { Observe, type IngestResult } from "./index.js";
 import { exampleValidators } from "./observations/index.js";
 
-const USAGE = `observe — ingest observation events and print the results
+const USAGE = `octopus-observe — ingest observation events and print the results
 
 Usage:
-  observe [file]         Read events from <file> (JSON array or NDJSON)
-  observe < events.ndjson  Read events from stdin
-  observe --help
+  octopus-observe [file]            Read events from <file> (JSON array or NDJSON)
+  octopus-observe < events.ndjson   Read events from stdin
+  octopus-observe --help
 
 Options:
   --audit    Also print the full audit trail
@@ -138,7 +138,7 @@ main().then(
     process.exitCode = code;
   },
   (error: unknown) => {
-    process.stderr.write(`observe: ${(error as Error).message}\n`);
+    process.stderr.write(`octopus-observe: ${(error as Error).message}\n`);
     process.exitCode = 2;
   },
 );

@@ -20,7 +20,7 @@ import {
  * SQLite persistence for Observe, built on Node's built-in `node:sqlite` — so it
  * adds **no npm dependency**. `node:sqlite` is currently an experimental Node
  * feature and emits an `ExperimentalWarning` on first use; it is loaded only
- * when this module is imported (via the `@octopus/observe/sqlite` entry point),
+ * when this module is imported (via the `octopus-observe/sqlite` entry point),
  * so the core library stays free of it.
  *
  * Both stores preserve Observe's invariants: observations are append-only (a
