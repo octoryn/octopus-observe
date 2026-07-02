@@ -56,6 +56,12 @@ export interface ObserveOptions {
    */
   readonly auditSecret?: AuditSecret;
   /**
+   * Optional HMAC key for observation integrity hashes. When set, an
+   * observation's `integrity` hash cannot be forged without the key. Use the
+   * same key when calling `verifyObservation`.
+   */
+  readonly integritySecret?: AuditSecret;
+  /**
    * What to do with an unknown `kind`. `"reject"` (default) treats it as a
    * validation failure; `"skip"` quietly drops it (recorded in the audit trail)
    * without producing a rejection — useful for firehoses of mixed events.
@@ -119,6 +125,9 @@ export class Observe {
       supportedEnvelopeVersions:
         options.supportedEnvelopeVersions ?? SUPPORTED_ENVELOPE_VERSIONS,
       timestampPolicy: options.timestampPolicy ?? DEFAULT_TIMESTAMP_POLICY,
+      ...(options.integritySecret !== undefined
+        ? { integritySecret: options.integritySecret }
+        : {}),
     });
     this.read = new ReadApi(observationStore, auditStore, registry.observationTypes());
   }

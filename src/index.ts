@@ -48,6 +48,13 @@ export {
 export type { ChainVerification, AuditSecret } from "./core/audit-chain.js";
 export { exportAuditNdjson } from "./audit/export.js";
 
+// Observation content integrity.
+export {
+  computeObservationHash,
+  verifyObservation,
+} from "./core/observation-integrity.js";
+export type { ObservationContent } from "./core/observation-integrity.js";
+
 // Versions.
 export {
   NORMALIZATION_VERSION,

@@ -6,6 +6,8 @@ import { type Result, ok, err } from "../core/result.js";
 import type { Clock } from "../core/clock.js";
 import { observationId } from "../core/ids.js";
 import { deepFreeze } from "../core/freeze.js";
+import { type ObservationContent, computeObservationHash } from "../core/observation-integrity.js";
+import type { AuditSecret } from "../core/audit-chain.js";
 import type { ValidatorRegistry } from "../validate/registry.js";
 import type { Resolver } from "./resolver.js";
 import { parseEnvelope } from "./envelope.js";
@@ -19,6 +21,8 @@ export interface NormalizerDeps {
   readonly normalizationVersion: string;
   readonly supportedEnvelopeVersions: readonly string[];
   readonly timestampPolicy: TimestampPolicy;
+  /** Optional HMAC key for observation integrity hashes. */
+  readonly integritySecret?: AuditSecret;
 }
 
 /**
@@ -106,7 +110,7 @@ export class Normalizer {
       ...(event.source?.version !== undefined ? { source: event.source.version } : {}),
     };
 
-    const observation: Observation = {
+    const content: ObservationContent = {
       id,
       type,
       at,
@@ -117,6 +121,11 @@ export class Normalizer {
       source: event.source ?? {},
       sourceEventId: event.eventId,
       versions,
+    };
+
+    const observation: Observation = {
+      ...content,
+      integrity: computeObservationHash(content, this.deps.integritySecret),
     };
 
     return ok(deepFreeze(observation));

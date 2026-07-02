@@ -117,6 +117,27 @@ core to one organization's vocabulary. A ref is an open `(type, id)` pair:
 `type` names the kind ("actor", "team", "service", "pull_request", ...) and `id`
 identifies within it. Consumers match on `type`.
 
+### 3.4 Observation integrity
+
+The deterministic `id` establishes *identity* (for dedup), not *integrity*: it
+is a function of `(sourceEventId, type, normalizationVersion)`, so it would not
+change if someone edited an attribute of a stored observation directly in the
+database. To close that gap, every observation also carries an `integrity` hash
+over **all** of its content (every field except `integrity` itself), computed at
+ingest and serialized key-order-independently (`stableStringify`) so it is
+stable across storage round-trips but sensitive to any value change.
+`verifyObservation(obs, secret?)` recomputes and compares.
+
+This mirrors the audit chain's trust model (§7.1): unkeyed it is
+**tamper-evident** (detects edits/corruption by anyone who does not recompute);
+supply an `integritySecret` and the hash becomes a keyed HMAC that cannot be
+forged without the key — **tamper-resistant**. The audit trail proves what
+*happened* to an event; observation integrity proves each stored fact is
+*unaltered*. `computeObservationHash` / `stableStringify` are frozen wire
+contracts. The hash covers `ingestedAt`, so re-normalizing the same event under
+a different clock yields a different integrity — expected, since `ingestedAt` is
+part of the record and `verifyObservation` always uses the stored value.
+
 ---
 
 ## 4. Validation

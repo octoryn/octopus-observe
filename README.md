@@ -31,7 +31,7 @@ connector SDK.
 ```bash
 npm install
 npm run typecheck   # tsc --noEmit
-npm test            # node --test (124 tests)
+npm test            # node --test (131 tests)
 npm run build       # emit dist/
 ```
 
@@ -168,6 +168,24 @@ const observe = new Observe({ validators, auditSecret: process.env.AUDIT_KEY });
 // verify with the same key:
 verifyAuditChain(await observe.read.queryAudit(), process.env.AUDIT_KEY);
 ```
+
+## Observation integrity
+
+Every observation carries an `integrity` hash over its content, so a stored
+observation altered after the fact (e.g. an attribute edited directly in the DB)
+is detectable — independently of the deterministic `id`:
+
+```ts
+import { verifyObservation } from "@octopus/observe";
+
+const obs = await observe.read.getObservation(id);
+verifyObservation(obs); // false if any field was tampered with
+```
+
+Like the audit chain, it's tamper-evident by default; pass `integritySecret` to
+`Observe` for a keyed HMAC that can't be forged without the key (verify with the
+same key). The audit trail proves what *happened*; observation integrity proves
+each stored fact is *unaltered*.
 
 ## Raw-event archive (optional)
 

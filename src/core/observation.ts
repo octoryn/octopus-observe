@@ -60,4 +60,14 @@ export interface Observation {
 
   /** The contract versions that produced this observation. */
   readonly versions: ObservationVersions;
+
+  /**
+   * Tamper-evidence hash over all of this observation's content (every field
+   * except `integrity` itself). Lets a reader detect if a stored observation
+   * was altered after the fact — e.g. an attribute edited directly in the
+   * database — independently of the deterministic `id`. See
+   * `core/observation-integrity.ts`; optionally keyed (HMAC) for
+   * tamper-resistance, not just evidence.
+   */
+  readonly integrity: string;
 }

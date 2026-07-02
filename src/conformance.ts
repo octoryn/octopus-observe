@@ -51,6 +51,7 @@ function observation(over: Partial<Observation> & Pick<Observation, "id" | "at">
     source: { system: "github", version: "2022-11-28" },
     sourceEventId: over.id,
     versions: { envelope: "1.0", schema: "1.0", normalization: "1.0", source: "2022-11-28" },
+    integrity: `integrity-${over.id}`,
     ...over,
   });
 }

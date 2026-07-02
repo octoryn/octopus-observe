@@ -17,6 +17,7 @@ function obs(overrides: Partial<Observation> & Pick<Observation, "id" | "at">): 
     source: {},
     sourceEventId: overrides.id,
     versions: { envelope: "1.0", schema: "1.0", normalization: "1.0" },
+    integrity: `integrity-${overrides.id}`,
     ...overrides,
   };
 }

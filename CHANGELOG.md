@@ -5,6 +5,20 @@ All notable changes to Observe are documented here. The format follows
 semantic versioning once it reaches 1.0. Every release was hardened by an
 independent adversarial ("red-team") review before landing.
 
+## [0.5.0] — 2026-07-02
+
+### Added
+- **Observation content integrity.** Every observation now carries an
+  `integrity` hash over all of its content, so a stored observation that was
+  altered after the fact (e.g. an attribute edited directly in the database) is
+  detectable with `verifyObservation(obs, secret?)` — independently of the
+  deterministic `id`. Optional keyed HMAC (`integritySecret` on `Observe` /
+  `renormalize`) upgrades it from tamper-evidence to tamper-resistance, matching
+  the audit chain's model. This makes the observations themselves self-verifying,
+  completing the trust story (the audit trail *about* them was already
+  tamper-evident). `computeObservationHash` / `verifyObservation` are exported;
+  their encoding is a frozen wire contract.
+
 ## [0.4.0] — 2026-07-02
 
 ### Added

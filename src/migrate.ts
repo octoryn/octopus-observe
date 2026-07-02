@@ -8,6 +8,7 @@ import { ValidatorRegistry } from "./validate/registry.js";
 import { type Resolver, identityResolver } from "./normalize/resolver.js";
 import { Normalizer } from "./normalize/normalizer.js";
 import { type TimestampPolicy, DEFAULT_TIMESTAMP_POLICY } from "./normalize/timestamp.js";
+import type { AuditSecret } from "./core/audit-chain.js";
 
 /**
  * Inputs for a re-normalization pass. Mirrors the normalization-relevant subset
@@ -21,6 +22,7 @@ export interface RenormalizeOptions {
   readonly clock?: Clock;
   readonly supportedEnvelopeVersions?: readonly string[];
   readonly timestampPolicy?: TimestampPolicy;
+  readonly integritySecret?: AuditSecret;
 }
 
 /** The result of a re-normalization pass, partitioned by outcome. */
@@ -56,6 +58,9 @@ export function renormalize(
     normalizationVersion: options.normalizationVersion ?? NORMALIZATION_VERSION,
     supportedEnvelopeVersions: options.supportedEnvelopeVersions ?? SUPPORTED_ENVELOPE_VERSIONS,
     timestampPolicy: options.timestampPolicy ?? DEFAULT_TIMESTAMP_POLICY,
+    ...(options.integritySecret !== undefined
+      ? { integritySecret: options.integritySecret }
+      : {}),
   });
 
   const observations: Observation[] = [];
