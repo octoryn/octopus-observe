@@ -31,7 +31,7 @@ connector SDK.
 ```bash
 npm install
 npm run typecheck   # tsc --noEmit
-npm test            # node --test (92 tests)
+npm test            # node --test (124 tests)
 npm run build       # emit dist/
 ```
 
@@ -214,6 +214,27 @@ const { observations, rejections } = renormalize(
 The end-to-end shape is `archive.replay()` → `renormalize` → `store.put`. See
 [`docs/DESIGN.md`](docs/DESIGN.md) §6.1 and §8.1 for the boundary discipline and
 the full migration playbook.
+
+## Verifying a storage adapter
+
+Writing your own `ObservationStore` / `AuditStore` / `RawEventArchive`? A
+reusable conformance suite proves it satisfies the same contract the built-ins
+do — round-tripping full records, ANDed filters, empty-store reads, append-only
+semantics, and audit-safe pruning. Point it at your factories in a
+`node --test` file:
+
+```ts
+import { storeConformance } from "@octopus/observe/conformance";
+import { MyPostgresObservationStore } from "./my-adapter.js";
+
+storeConformance("postgres", {
+  observations: () => new MyPostgresObservationStore(freshTestDb()),
+});
+```
+
+The suite is adversarial by design: an adapter that drops a field, ORs its
+filters, or mishandles a cold store fails rather than passing on partial
+coverage.
 
 ## Extension points
 

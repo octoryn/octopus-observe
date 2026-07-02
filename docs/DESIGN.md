@@ -425,7 +425,11 @@ Exactly three, and no more. Everything else is closed.
 
 1. **Validators** (`validate/`) — add an input kind / schema version.
 2. **Storage adapters** (`storage/store.ts`) — swap persistence for the
-   observation store, audit store, and the optional `RawEventArchive` port.
+   observation store, audit store, and the optional `RawEventArchive` port. Any
+   adapter can prove it satisfies the contract with the reusable conformance
+   suite (`@octopus/observe/conformance`), which the in-memory and SQLite
+   backends both pass; it is adversarial (full-record fidelity, ANDed filters,
+   empty-store reads, append-only survival) so partial implementations fail.
 3. **Resolver** (`normalize/resolver.ts`) — cross-source identity resolution.
 
 Connectors are explicitly *not* an extension point here; they live outside the

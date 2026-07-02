@@ -5,6 +5,25 @@ All notable changes to Observe are documented here. The format follows
 semantic versioning once it reaches 1.0. Every release was hardened by an
 independent adversarial ("red-team") review before landing.
 
+## [0.4.0] — 2026-07-02
+
+### Added
+- **Storage conformance suite** (`@octopus/observe/conformance`): a reusable,
+  adversarial contract test battery for `ObservationStore` / `AuditStore` /
+  `RawEventArchive`, so any third-party adapter can prove parity rather than
+  being trusted on faith. Run against the in-memory and SQLite backends in-repo.
+
+### Changed
+- The in-memory audit store now enforces id-uniqueness (matching SQLite's
+  `UNIQUE(id)`), so append-only semantics are identical across backends.
+
+### Notes
+- The conformance suite was hardened after its own multi-agent review found 12
+  coverage gaps (single-filter-only tests, no field-fidelity deep-equality, no
+  empty-store or `receivedAt` checks, …). It now round-trips full records,
+  exercises ANDed filters, empty-store reads, and append-only value survival —
+  verified to *fail* deliberately-broken adapters, not just pass the good ones.
+
 ## [0.3.0] — 2026-07-02
 
 ### Added

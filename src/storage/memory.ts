@@ -114,11 +114,14 @@ export class InMemoryObservationStore implements ObservationStore {
 /** In-memory {@link AuditStore}. Records are appended and read in order. */
 export class InMemoryAuditStore implements AuditStore {
   private readonly records: AuditRecord[] = [];
+  private readonly seenIds = new Set<string>();
 
   append(record: AuditRecord): Promise<void> {
-    // Append-only and strictly ordered: the sequence must advance. This catches
-    // a forked chain (e.g. two emitters seeded from the same tail both minting
-    // the same next sequence) rather than silently corrupting the trail.
+    // Append-only and strictly ordered: the sequence must advance and the id
+    // must be unique. This catches a forked/replayed chain (e.g. two emitters
+    // seeded from the same tail minting the same next sequence, or a record
+    // re-appended) rather than silently corrupting the trail. Mirrors the
+    // SQLite adapter's UNIQUE(id) / UNIQUE(sequence) constraints.
     const last = this.records[this.records.length - 1];
     if (last !== undefined && record.sequence <= last.sequence) {
       return Promise.reject(
@@ -127,7 +130,13 @@ export class InMemoryAuditStore implements AuditStore {
         ),
       );
     }
+    if (this.seenIds.has(record.id)) {
+      return Promise.reject(
+        new Error(`append-only violation: audit record ${record.id} already stored`),
+      );
+    }
     this.records.push(record);
+    this.seenIds.add(record.id);
     return Promise.resolve();
   }
 
