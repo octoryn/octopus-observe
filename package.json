@@ -3,7 +3,7 @@
   "version": "0.7.0",
   "description": "Observe: standalone, governed, auditable intake and normalization — raw external events into trusted, canonical, immutable observations.",
   "license": "Apache-2.0",
-  "author": "Octoryn",
+  "author": "Ran Tao <ran@octopusos.ai>",
   "type": "module",
   "engines": {
     "node": ">=20"

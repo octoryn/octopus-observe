@@ -7,7 +7,7 @@
 安全漏洞请**不要提交公开 issue**。
 
 请通过 GitHub Security Advisories(仓库 Security 页的 "Report a vulnerability")
-或邮件 **security@octoryn.com** 私下报告。请包含描述、复现步骤与影响。我们力争在
+或邮件 **security@octopusos.ai** 私下报告。请包含描述、复现步骤与影响。我们力争在
 数个工作日内确认。
 
 ## 范围说明
