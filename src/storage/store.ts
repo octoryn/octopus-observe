@@ -140,6 +140,13 @@ export function assertValidReplayQuery(query: ReplayQuery): void {
   }
 }
 
+/** Guard for {@link RawEventArchive.pruneBefore}'s `beforeSequence` argument. */
+export function assertValidPruneSequence(beforeSequence: number): void {
+  if (!Number.isInteger(beforeSequence) || beforeSequence < 0) {
+    throw new RangeError("pruneBefore(beforeSequence) requires a non-negative integer");
+  }
+}
+
 /**
  * Append-only archive of raw events — an **optional, separate port** from the
  * observation and audit stores.
@@ -158,4 +165,20 @@ export interface RawEventArchive {
   replay(query?: ReplayQuery): Promise<readonly ArchivedEvent[]>;
   /** Total number of archived events. */
   count(): Promise<number>;
+  /**
+   * Retention / erasure: remove every event whose `sequence` is **strictly
+   * less than** `beforeSequence`, and return how many were removed.
+   *
+   * This is deliberately a **prefix delete only** — it removes the oldest tape,
+   * never a middle slice — so the tape's audit semantics are preserved: what
+   * remains is still an ordered, gap-free-from-the-cut suffix, `fromSequence`
+   * bookmarks at or after the cut stay valid, and because sequences are never
+   * reused, future appends continue monotonically. Predicate/arbitrary deletion
+   * is intentionally not offered, as it would punch holes in the tape.
+   *
+   * Use it to enforce a retention window over a plaintext archive that may hold
+   * PII/PHI (compute the cut sequence from `replay()` by age or count, then
+   * prune). `beforeSequence` must be a non-negative integer.
+   */
+  pruneBefore(beforeSequence: number): Promise<number>;
 }

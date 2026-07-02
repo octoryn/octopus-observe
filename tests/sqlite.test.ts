@@ -1,12 +1,27 @@
-import { test } from "node:test";
+import { test as baseTest } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
 import { Observe, fixedClock, verifyAuditChain } from "../src/index.js";
 import { createSqliteStores } from "../src/storage/sqlite.js";
 import { exampleValidators } from "../src/observations/index.js";
 import { reviewEvent, FIXED_NOW } from "./helpers.js";
+
+// The SQLite adapter needs Node's built-in node:sqlite (Node >= 22.5). Probe for
+// the module *only* (no store side effects) so this suite skips gracefully where
+// it is absent, while a genuine adapter break on a capable runtime still fails
+// loudly rather than being masked as "unavailable".
+let skip: string | false = false;
+try {
+  createRequire(import.meta.url)("node:sqlite");
+} catch {
+  skip = "node:sqlite unavailable (requires Node >= 22.5)";
+}
+const test = (name: string, fn: () => void | Promise<void>): void => {
+  baseTest(name, { skip }, fn);
+};
 
 const deployEvent = (eventId: string) =>
   reviewEvent({
@@ -154,6 +169,30 @@ test("pruning the archive never wedges or reuses a sequence", async () => {
     // New sequence is strictly greater than any ever used — never reused.
     assert.ok(c.sequence > a.sequence + 1);
     assert.equal(await stores.rawEvents.count(), 2);
+  } finally {
+    stores.close();
+  }
+});
+
+test("SQLite pruneBefore is an audit-safe prefix delete that never reuses sequences", async () => {
+  const stores = createSqliteStores(":memory:");
+  try {
+    const a = await stores.rawEvents.archive({ i: 0 }, 0);
+    await stores.rawEvents.archive({ i: 1 }, 1);
+    const c = await stores.rawEvents.archive({ i: 2 }, 2);
+
+    const removed = await stores.rawEvents.pruneBefore(c.sequence);
+    assert.equal(removed, 2); // a and b pruned
+    assert.equal(await stores.rawEvents.count(), 1);
+    const remaining = await stores.rawEvents.replay();
+    assert.deepEqual(remaining.map((e) => e.sequence), [c.sequence]);
+
+    // A later append gets a strictly greater sequence — never a pruned one.
+    const d = await stores.rawEvents.archive({ i: 3 }, 3);
+    assert.ok(d.sequence > c.sequence);
+    assert.ok(d.sequence > a.sequence);
+
+    await assert.rejects(() => stores.rawEvents.pruneBefore(-1), RangeError);
   } finally {
     stores.close();
   }

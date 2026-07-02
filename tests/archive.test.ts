@@ -38,6 +38,44 @@ test("replay rejects malformed bounds", async () => {
   await assert.rejects(() => archive.replay({ fromSequence: 1.5 }), RangeError);
 });
 
+test("pruneBefore removes the oldest prefix and preserves the suffix", async () => {
+  const archive = new InMemoryRawEventArchive();
+  for (let i = 0; i < 5; i++) await archive.archive({ i }, i); // sequences 0..4
+
+  const removed = await archive.pruneBefore(2);
+  assert.equal(removed, 2); // 0 and 1 removed
+  assert.equal(await archive.count(), 3);
+  const remaining = await archive.replay();
+  assert.deepEqual(remaining.map((e) => e.sequence), [2, 3, 4]); // ordered suffix, unchanged ids
+});
+
+test("pruneBefore never reuses a sequence for future appends", async () => {
+  const archive = new InMemoryRawEventArchive();
+  await archive.archive({ i: 0 }, 0);
+  await archive.archive({ i: 1 }, 1);
+  await archive.pruneBefore(2); // removes everything so far
+  assert.equal(await archive.count(), 0);
+  const next = await archive.archive({ i: 2 }, 2);
+  assert.equal(next.sequence, 2); // monotonic counter, not reused from 0
+  // A bookmark past the cut still works.
+  assert.deepEqual((await archive.replay({ fromSequence: 2 })).map((e) => e.sequence), [2]);
+});
+
+test("pruneBefore is a no-op below the floor and total above the ceiling", async () => {
+  const archive = new InMemoryRawEventArchive();
+  for (let i = 0; i < 3; i++) await archive.archive({ i }, i);
+  assert.equal(await archive.pruneBefore(0), 0); // nothing older than 0
+  assert.equal(await archive.count(), 3);
+  assert.equal(await archive.pruneBefore(999), 3); // everything is older than 999
+  assert.equal(await archive.count(), 0);
+});
+
+test("pruneBefore validates its argument", async () => {
+  const archive = new InMemoryRawEventArchive();
+  await assert.rejects(() => archive.pruneBefore(-1), RangeError);
+  await assert.rejects(() => archive.pruneBefore(1.5), RangeError);
+});
+
 test("archive stores a faithful copy immune to later mutation", async () => {
   const archive = new InMemoryRawEventArchive();
   const event = { kind: "x", nested: { v: 1 } };
@@ -84,6 +122,7 @@ test("a failing archive surfaces as an infrastructure error and stores nothing",
     archive: () => Promise.reject(new Error("disk full")),
     replay: () => Promise.resolve([]),
     count: () => Promise.resolve(0),
+    pruneBefore: () => Promise.resolve(0),
   };
   const observe = new Observe({
     validators: exampleValidators,

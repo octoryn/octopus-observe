@@ -31,7 +31,7 @@ connector SDK.
 ```bash
 npm install
 npm run typecheck   # tsc --noEmit
-npm test            # node --test (87 tests)
+npm test            # node --test (92 tests)
 npm run build       # emit dist/
 ```
 
@@ -183,6 +183,15 @@ import { Observe, InMemoryRawEventArchive } from "@octopus/observe";
 
 const archive = new InMemoryRawEventArchive();
 const observe = new Observe({ validators, rawEventArchive: archive });
+```
+
+Because it's a plaintext tape that may hold PII/PHI, retention is first-class.
+`pruneBefore` removes the oldest prefix (audit-safe — it never punches holes,
+and sequences are never reused):
+
+```ts
+// Keep only events at/after a cut sequence (e.g. computed from an age window):
+const removed = await archive.pruneBefore(cutSequence);
 ```
 
 ## Backfill / re-normalization

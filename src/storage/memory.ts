@@ -12,6 +12,7 @@ import {
   type ReplayQuery,
   assertValidObservationQuery,
   assertValidReplayQuery,
+  assertValidPruneSequence,
 } from "./store.js";
 
 /**
@@ -188,5 +189,25 @@ export class InMemoryRawEventArchive implements RawEventArchive {
 
   count(): Promise<number> {
     return Promise.resolve(this.events.length);
+  }
+
+  pruneBefore(beforeSequence: number): Promise<number> {
+    try {
+      assertValidPruneSequence(beforeSequence);
+    } catch (error) {
+      return Promise.reject(error as Error);
+    }
+    // Events are stored in ascending sequence order, so the records to prune are
+    // a contiguous prefix. Count it and splice — no array spread, so this scales
+    // to large archives. `nextSequence` is untouched, so sequences never repeat.
+    let removeCount = 0;
+    while (
+      removeCount < this.events.length &&
+      (this.events[removeCount] as ArchivedEvent).sequence < beforeSequence
+    ) {
+      removeCount += 1;
+    }
+    this.events.splice(0, removeCount);
+    return Promise.resolve(removeCount);
   }
 }

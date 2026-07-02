@@ -213,14 +213,19 @@ Properties and operational notes:
   therefore be JSON-serializable — a non-serializable input (a `bigint`, a
   circular object) fails archival as an infrastructure error rather than being
   stored lossily.
-- **Compliance surface.** Unlike the audit chain (which stores reasons/detail,
-  never payloads), the archive is a **full plaintext tape of raw inputs** — it
-  may contain PII or secrets. Attaching one changes the deployment's
-  data-retention profile: apply encryption/access-control per policy, and note
-  that retention/erasure deletes are safe here (the never-reused sequence means
-  pruning leaves harmless gaps and never wedges future appends). Growth is
-  unbounded by default (one payload per ingested event, including rejected
-  ones); retention/compaction is an operator concern, as with the audit trail.
+- **Compliance surface & retention.** Unlike the audit chain (which stores
+  reasons/detail, never payloads), the archive is a **full plaintext tape of raw
+  inputs** — it may contain PII/PHI or secrets. Attaching one changes the
+  deployment's data-retention profile: apply encryption/access-control per
+  policy. Retention/erasure is a **first-class operation**: `pruneBefore(sequence)`
+  removes the oldest prefix and returns the count pruned. It is prefix-only by
+  design (never a middle slice), so it preserves the tape's audit semantics —
+  the remainder is still an ordered suffix, bookmarks past the cut stay valid,
+  and the never-reused sequence means pruning leaves harmless gaps and never
+  wedges future appends. Arbitrary/predicate deletion is intentionally not
+  offered. Build a policy (by age or count) by reading `replay()` to find the
+  cut sequence, then calling `pruneBefore`. Growth is otherwise unbounded (one
+  payload per ingested event, including rejected ones).
 
 ---
 

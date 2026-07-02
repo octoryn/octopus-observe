@@ -1,4 +1,5 @@
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
+import { createRequire } from "node:module";
 import type { Observation } from "../core/observation.js";
 import type { AuditRecord } from "../core/audit.js";
 import { deepFreeze } from "../core/freeze.js";
@@ -12,6 +13,7 @@ import {
   type ReplayQuery,
   assertValidObservationQuery,
   assertValidReplayQuery,
+  assertValidPruneSequence,
 } from "./store.js";
 
 /**
@@ -31,6 +33,17 @@ function isUniqueViolation(error: unknown): boolean {
   return error instanceof Error && /UNIQUE constraint failed/i.test(error.message);
 }
 
+/**
+ * Lazily resolve the built-in SQLite module. Kept out of module-load so that
+ * merely importing this entry point on a runtime without `node:sqlite` (Node
+ * < 22.5) does not throw — the error surfaces only when a store is actually
+ * created.
+ */
+function loadDatabaseSync(): typeof DatabaseSync {
+  const require = createRequire(import.meta.url);
+  return (require("node:sqlite") as typeof import("node:sqlite")).DatabaseSync;
+}
+
 /** Open one SQLite connection and return the stores backed by it. */
 export interface SqliteStores {
   readonly db: DatabaseSync;
@@ -48,7 +61,8 @@ export interface SqliteStores {
  * for an ephemeral db.
  */
 export function createSqliteStores(location: string): SqliteStores {
-  const db = new DatabaseSync(location);
+  const DatabaseSyncCtor = loadDatabaseSync();
+  const db = new DatabaseSyncCtor(location);
   db.exec("PRAGMA journal_mode = WAL;");
   return {
     db,
@@ -323,5 +337,17 @@ export class SqliteRawEventArchive implements RawEventArchive {
   count(): Promise<number> {
     const row = this.db.prepare("SELECT COUNT(*) AS c FROM raw_events").get() as { c: number };
     return Promise.resolve(row.c);
+  }
+
+  pruneBefore(beforeSequence: number): Promise<number> {
+    try {
+      assertValidPruneSequence(beforeSequence);
+    } catch (error) {
+      return Promise.reject(error as Error);
+    }
+    // Prefix delete. AUTOINCREMENT keeps sqlite_sequence's high-water mark, so
+    // pruned sequences are never reused by later inserts.
+    const info = this.db.prepare("DELETE FROM raw_events WHERE sequence < ?").run(beforeSequence);
+    return Promise.resolve(Number(info.changes));
   }
 }
