@@ -1,36 +1,19 @@
 import type { Observation } from "../core/observation.js";
 import type { TaggedRef } from "../core/refs.js";
 import type { AuditRecord } from "../core/audit.js";
-import type {
-  AuditQuery,
-  AuditStore,
-  ObservationQuery,
-  ObservationStore,
-  RefMatch,
+import {
+  type AuditQuery,
+  type AuditStore,
+  type ObservationQuery,
+  type ObservationStore,
+  type RefMatch,
+  assertValidObservationQuery,
 } from "./store.js";
 
 function refMatches(refs: readonly TaggedRef[], match: RefMatch): boolean {
   return refs.some(
     (ref) => ref.id === match.id && (match.type === undefined || ref.type === match.type),
   );
-}
-
-/**
- * Reject malformed query bounds loudly rather than silently returning wrong
- * results. A `NaN` bound (e.g. from `Date.parse` of bad input) would otherwise
- * be treated as "no bound", and a negative `limit` would drop rows from the
- * end — both silent data-correctness hazards for a trusted read path.
- */
-function validateQuery(query: ObservationQuery): void {
-  for (const key of ["from", "to"] as const) {
-    const value = query[key];
-    if (value !== undefined && !Number.isFinite(value)) {
-      throw new RangeError(`ObservationQuery.${key} must be a finite number`);
-    }
-  }
-  if (query.limit !== undefined && (!Number.isInteger(query.limit) || query.limit < 0)) {
-    throw new RangeError("ObservationQuery.limit must be a non-negative integer");
-  }
 }
 
 function observationMatches(observation: Observation, query: ObservationQuery): boolean {
@@ -86,7 +69,7 @@ export class InMemoryObservationStore implements ObservationStore {
 
   query(query: ObservationQuery = {}): Promise<readonly Observation[]> {
     try {
-      validateQuery(query);
+      assertValidObservationQuery(query);
     } catch (error) {
       return Promise.reject(error as Error);
     }
@@ -118,6 +101,17 @@ export class InMemoryAuditStore implements AuditStore {
   private readonly records: AuditRecord[] = [];
 
   append(record: AuditRecord): Promise<void> {
+    // Append-only and strictly ordered: the sequence must advance. This catches
+    // a forked chain (e.g. two emitters seeded from the same tail both minting
+    // the same next sequence) rather than silently corrupting the trail.
+    const last = this.records[this.records.length - 1];
+    if (last !== undefined && record.sequence <= last.sequence) {
+      return Promise.reject(
+        new Error(
+          `append-only violation: audit sequence ${record.sequence} does not advance past ${last.sequence}`,
+        ),
+      );
+    }
     this.records.push(record);
     return Promise.resolve();
   }
@@ -139,5 +133,9 @@ export class InMemoryAuditStore implements AuditStore {
       results = results.slice(0, query.limit);
     }
     return Promise.resolve(results);
+  }
+
+  tail(): Promise<AuditRecord | undefined> {
+    return Promise.resolve(this.records[this.records.length - 1]);
   }
 }

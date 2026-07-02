@@ -31,11 +31,16 @@ connector SDK.
 ```bash
 npm install
 npm run typecheck   # tsc --noEmit
-npm test            # node --test (46 tests)
+npm test            # node --test (68 tests)
 npm run build       # emit dist/
 ```
 
-Requires Node ≥ 20.
+Requires Node ≥ 20. The optional SQLite adapter uses Node's built-in
+`node:sqlite` and works on Node ≥ 22.
+
+Timestamps are enforced to RFC 3339 with a timezone offset by default (so
+canonical times are region-independent); pass `timestampPolicy: "lenient"` to
+opt out.
 
 ## Quickstart
 
@@ -113,6 +118,74 @@ const mergeValidator: Validator = {
 
 const observe = new Observe({ validators: [mergeValidator] });
 ```
+
+## Persistence (SQLite)
+
+The core ships an in-memory store; a durable SQLite adapter is available from a
+separate entry point (so importing the core never loads the experimental
+`node:sqlite`) and adds **no npm dependency**:
+
+```ts
+import { Observe, exampleValidators } from "@octopus/observe";
+import { createSqliteStores } from "@octopus/observe/sqlite";
+
+const stores = createSqliteStores("./observe.db"); // or ":memory:"
+const observe = new Observe({
+  validators: exampleValidators,
+  observationStore: stores.observations,
+  auditStore: stores.audit,
+});
+
+// … ingest …
+stores.close();
+```
+
+Reopen the same file later and both the observations and the audit hash chain
+resume exactly where they left off. Implement `ObservationStore` / `AuditStore`
+yourself for any other backend.
+
+## Tamper-evident audit
+
+Every event's audit records form a **hash chain** (`sequence`, `previousHash`,
+`hash`). Any edit, insertion, deletion, or reordering breaks it:
+
+```ts
+import { verifyAuditChain, exportAuditNdjson } from "@octopus/observe";
+
+const trail = await observe.read.queryAudit();
+const check = verifyAuditChain(trail);          // { ok: true } or { ok: false, brokenAt, reason }
+
+const ndjson = exportAuditNdjson(trail);        // ship to a SIEM / log pipeline
+```
+
+By default this is **tamper-evident** (detects casual/in-place tampering) but
+not tamper-proof — the hash is public. For deployments that don't trust the
+store, pass an `auditSecret` to make the chain a keyed HMAC that can't be forged
+without the key:
+
+```ts
+const observe = new Observe({ validators, auditSecret: process.env.AUDIT_KEY });
+// verify with the same key:
+verifyAuditChain(await observe.read.queryAudit(), process.env.AUDIT_KEY);
+```
+
+## Backfill / re-normalization
+
+Observations are immutable and their id is scoped by normalization version, so
+re-normalizing under a new version produces **new, coexisting** observations
+rather than rewriting history. `renormalize` is the pure, dry-runnable primitive
+(replay the original events through it, then `put` the results):
+
+```ts
+import { renormalize } from "@octopus/observe";
+
+const { observations, rejections } = renormalize(originalEvents, {
+  validators,
+  normalizationVersion: "2.0",
+});
+```
+
+See [`docs/DESIGN.md`](docs/DESIGN.md) §8.1 for the full migration playbook.
 
 ## Extension points
 

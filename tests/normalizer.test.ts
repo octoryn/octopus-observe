@@ -15,6 +15,7 @@ function makeNormalizer(overrides: { normalizationVersion?: string } = {}): Norm
     clock: fixedClock(FIXED_NOW),
     normalizationVersion: overrides.normalizationVersion ?? "1.0",
     supportedEnvelopeVersions: ["1.0"],
+    timestampPolicy: "rfc3339",
   });
 }
 
@@ -96,6 +97,7 @@ test("re-owns resolver output: shared resolver state is neither frozen nor leake
     clock: fixedClock(FIXED_NOW),
     normalizationVersion: "1.0",
     supportedEnvelopeVersions: ["1.0"],
+    timestampPolicy: "rfc3339",
   });
 
   const result = normalizer.normalize(reviewEvent());

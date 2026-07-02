@@ -7,6 +7,8 @@ import type { Validator } from "./validate/validator.js";
 import { ValidatorRegistry } from "./validate/registry.js";
 import { type Resolver, identityResolver } from "./normalize/resolver.js";
 import { Normalizer } from "./normalize/normalizer.js";
+import { type TimestampPolicy, DEFAULT_TIMESTAMP_POLICY } from "./normalize/timestamp.js";
+import type { AuditSecret } from "./core/audit-chain.js";
 import {
   InMemoryAuditStore,
   InMemoryObservationStore,
@@ -34,6 +36,18 @@ export interface ObserveOptions {
   readonly normalizationVersion?: string;
   /** Accepted envelope versions. Defaults to the built-in supported set. */
   readonly supportedEnvelopeVersions?: readonly string[];
+  /**
+   * How `occurredAt` is parsed. Defaults to `"rfc3339"` — a mandatory timezone
+   * offset, for canonical, region-independent timestamps. Use `"lenient"` to
+   * knowingly accept looser (potentially non-canonical) timestamps.
+   */
+  readonly timestampPolicy?: TimestampPolicy;
+  /**
+   * Optional HMAC key for the audit hash chain. When set, audit hashes are
+   * keyed so the chain cannot be forged without the key (tamper-resistant, not
+   * merely tamper-evident). Use the same key when calling `verifyAuditChain`.
+   */
+  readonly auditSecret?: AuditSecret;
   /**
    * What to do with an unknown `kind`. `"reject"` (default) treats it as a
    * validation failure; `"skip"` quietly drops it (recorded in the audit trail)
@@ -85,7 +99,7 @@ export class Observe {
 
     this.observationStore = observationStore;
     this.onUnknownKind = options.onUnknownKind ?? "reject";
-    this.emitter = new AuditEmitter(auditStore, clock);
+    this.emitter = new AuditEmitter(auditStore, clock, options.auditSecret);
     this.normalizer = new Normalizer({
       registry,
       resolver: options.resolver ?? identityResolver,
@@ -93,6 +107,7 @@ export class Observe {
       normalizationVersion: options.normalizationVersion ?? NORMALIZATION_VERSION,
       supportedEnvelopeVersions:
         options.supportedEnvelopeVersions ?? SUPPORTED_ENVELOPE_VERSIONS,
+      timestampPolicy: options.timestampPolicy ?? DEFAULT_TIMESTAMP_POLICY,
     });
     this.read = new ReadApi(observationStore, auditStore, registry.observationTypes());
   }

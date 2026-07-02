@@ -9,6 +9,7 @@ import { deepFreeze } from "../core/freeze.js";
 import type { ValidatorRegistry } from "../validate/registry.js";
 import type { Resolver } from "./resolver.js";
 import { parseEnvelope } from "./envelope.js";
+import { type TimestampPolicy, parseTimestamp } from "./timestamp.js";
 
 /** Dependencies of the normalizer, all injected. */
 export interface NormalizerDeps {
@@ -17,6 +18,7 @@ export interface NormalizerDeps {
   readonly clock: Clock;
   readonly normalizationVersion: string;
   readonly supportedEnvelopeVersions: readonly string[];
+  readonly timestampPolicy: TimestampPolicy;
 }
 
 /**
@@ -79,14 +81,15 @@ export class Normalizer {
     }
 
     // --- Validation: timestamp ---------------------------------------------
-    const at = Date.parse(event.occurredAt);
-    if (Number.isNaN(at)) {
-      return err({
-        reason: "INVALID_TIMESTAMP",
-        message: `occurredAt "${event.occurredAt}" is not a parseable timestamp`,
-        eventId: event.eventId,
-      });
+    const timestamp = parseTimestamp(event.occurredAt, this.deps.timestampPolicy);
+    if (!timestamp.ok) {
+      const message =
+        timestamp.error === "not_rfc3339"
+          ? `occurredAt "${event.occurredAt}" must be an RFC 3339 timestamp with a timezone offset (e.g. a trailing "Z")`
+          : `occurredAt "${event.occurredAt}" is not a parseable timestamp`;
+      return err({ reason: "INVALID_TIMESTAMP", message, eventId: event.eventId });
     }
+    const at = timestamp.at;
 
     // --- Attribution -------------------------------------------------------
     const actors = this.resolveRefs(event, "actors");

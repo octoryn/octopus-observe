@@ -55,6 +55,25 @@ export interface ObservationStore {
   count(): Promise<number>;
 }
 
+/**
+ * Reject malformed query bounds loudly rather than silently returning wrong
+ * results. A `NaN` bound (e.g. from `Date.parse` of bad input) would otherwise
+ * be treated as "no bound", and a negative `limit` would drop rows from the end
+ * — both silent data-correctness hazards for a trusted read path. Every
+ * `ObservationStore` implementation should call this at the start of `query`.
+ */
+export function assertValidObservationQuery(query: ObservationQuery): void {
+  for (const key of ["from", "to"] as const) {
+    const value = query[key];
+    if (value !== undefined && !Number.isFinite(value)) {
+      throw new RangeError(`ObservationQuery.${key} must be a finite number`);
+    }
+  }
+  if (query.limit !== undefined && (!Number.isInteger(query.limit) || query.limit < 0)) {
+    throw new RangeError("ObservationQuery.limit must be a non-negative integer");
+  }
+}
+
 /** Query over the audit trail. */
 export interface AuditQuery {
   readonly eventId?: string;
@@ -65,9 +84,16 @@ export interface AuditQuery {
 
 /**
  * Append-only store of audit records. Like observations, audit records are
- * never mutated once written.
+ * never mutated once written. Records are stored and returned in append order,
+ * which is the order the hash chain is defined over.
  */
 export interface AuditStore {
   append(record: AuditRecord): Promise<void>;
   list(query?: AuditQuery): Promise<readonly AuditRecord[]>;
+  /**
+   * The most recently appended record, or `undefined` if empty. Used to resume
+   * the hash chain (its `hash` and `sequence`) when a new emitter attaches to a
+   * store that already holds records.
+   */
+  tail(): Promise<AuditRecord | undefined>;
 }

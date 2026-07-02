@@ -109,18 +109,46 @@ test("query rejects malformed bounds instead of silently corrupting results", as
 
 test("audit store lists and filters", async () => {
   const store = new InMemoryAuditStore();
-  const rec = (id: string, eventId: string, stage: AuditRecord["stage"]): AuditRecord => ({
+  const rec = (
+    id: string,
+    eventId: string,
+    stage: AuditRecord["stage"],
+    sequence: number,
+  ): AuditRecord => ({
     id,
     stage,
     outcome: "passed",
     eventId,
     at: 0,
+    sequence,
+    previousHash: "genesis",
+    hash: `hash-${id}`,
   });
-  await store.append(rec("1", "evt-1", "validation"));
-  await store.append(rec("2", "evt-1", "storage"));
-  await store.append(rec("3", "evt-2", "validation"));
+  await store.append(rec("1", "evt-1", "validation", 0));
+  await store.append(rec("2", "evt-1", "storage", 1));
+  await store.append(rec("3", "evt-2", "validation", 2));
 
   assert.equal((await store.list({ eventId: "evt-1" })).length, 2);
   assert.equal((await store.list({ stage: "storage" })).length, 1);
   assert.equal((await store.list()).length, 3);
+  assert.equal((await store.tail())?.id, "3");
+});
+
+test("audit store is append-only: sequence must advance", async () => {
+  const store = new InMemoryAuditStore();
+  const rec = (id: string, sequence: number): AuditRecord => ({
+    id,
+    stage: "validation",
+    outcome: "passed",
+    eventId: "e",
+    at: 0,
+    sequence,
+    previousHash: "genesis",
+    hash: `hash-${id}`,
+  });
+  await store.append(rec("a", 0));
+  await store.append(rec("b", 1));
+  // A non-advancing sequence (e.g. a forked chain) is rejected.
+  await assert.rejects(() => store.append(rec("c", 1)), /append-only/);
+  await assert.rejects(() => store.append(rec("d", 0)), /append-only/);
 });

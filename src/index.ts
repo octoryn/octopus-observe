@@ -31,11 +31,22 @@ export type {
 } from "./core/rejection.js";
 export type {
   AuditRecord,
+  AuditContent,
   AuditStage,
   AuditOutcome,
 } from "./core/audit.js";
 export type { Result } from "./core/result.js";
 export { ok, err } from "./core/result.js";
+export { stableStringify } from "./core/json.js";
+
+// Tamper-evident audit chain.
+export {
+  GENESIS_HASH,
+  computeAuditHash,
+  verifyAuditChain,
+} from "./core/audit-chain.js";
+export type { ChainVerification, AuditSecret } from "./core/audit-chain.js";
+export { exportAuditNdjson } from "./audit/export.js";
 
 // Versions.
 export {
@@ -52,6 +63,13 @@ export type { Validator, ValidationResult } from "./validate/validator.js";
 export { ValidatorRegistry } from "./validate/registry.js";
 export type { ValidatorLookup } from "./validate/registry.js";
 export { PayloadChecker } from "./validate/checker.js";
+
+// Timestamp policy.
+export {
+  type TimestampPolicy,
+  DEFAULT_TIMESTAMP_POLICY,
+  parseTimestamp,
+} from "./normalize/timestamp.js";
 
 // Attribution.
 export type { Resolver } from "./normalize/resolver.js";
@@ -74,9 +92,17 @@ export {
   InMemoryObservationStore,
   InMemoryAuditStore,
 } from "./storage/memory.js";
+export { assertValidObservationQuery } from "./storage/store.js";
+// Note: the SQLite adapter is available from the "@octopus/observe/sqlite"
+// entry point. It is intentionally not re-exported here so importing the core
+// never loads the experimental built-in SQLite module.
 
 // Read API.
 export { ReadApi } from "./api/read.js";
+
+// Backfill / migration.
+export { renormalize } from "./migrate.js";
+export type { RenormalizeOptions, RenormalizeResult } from "./migrate.js";
 
 // Example observation types.
 export {

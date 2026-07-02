@@ -87,10 +87,13 @@ Contract (see `src/core/event.ts`): `eventId`, `envelopeVersion`, `schemaVersion
 `kind`, `occurredAt`, `payload`, plus optional `source`, `actors`, `subjects`.
 The `payload` is typed `unknown` — it is interpreted only by a validator.
 
-`occurredAt` must be a parseable timestamp. It **should** carry an explicit
-timezone offset (e.g. a trailing `Z`); an ISO date-time without an offset is
-interpreted per the JS runtime and is therefore discouraged for canonical data.
-See §9 for the rationale and the boundary this draws.
+`occurredAt` must be an RFC 3339 timestamp **with an explicit timezone offset**
+(e.g. a trailing `Z` or `±HH:MM`). This is enforced by default (`timestampPolicy:
+"rfc3339"`): an offset-less date-time is interpreted per the JS runtime and so is
+not canonical across machines or regions, which matters for audit and
+compliance, and is therefore rejected as `INVALID_TIMESTAMP`. A `"lenient"`
+policy is available as an explicit opt-out for pipelines that knowingly ingest
+looser sources.
 
 ### 3.2 Observation — trusted, canonical, immutable
 
@@ -161,10 +164,20 @@ Two append-only stores behind interfaces (see `src/storage/store.ts`):
 - `AuditStore` — `append` / `list`.
 
 The in-memory implementations ship in-repo and are **first-class**, not test
-doubles — they are what make Observe usable with no external dependency. Other
-backends (SQLite, Postgres, ...) are adapters that satisfy these interfaces.
+doubles — they are what make Observe usable with no external dependency.
 `ObservationQuery` supports filtering by type(s), time window (`from` inclusive,
-`to` exclusive), actor/subject ref, plus ordering and limiting.
+`to` exclusive), actor/subject ref, plus ordering and limiting; malformed bounds
+(`NaN` / negative limit) are rejected loudly rather than silently returning
+wrong results (`assertValidObservationQuery`, shared by all adapters).
+
+A **SQLite adapter** ships in-repo at the `@octopus/observe/sqlite` entry point
+(`createSqliteStores(location)`). It is built on Node's built-in `node:sqlite`,
+so it adds **no npm dependency**; that module is experimental and is loaded only
+when this adapter is imported, keeping the core entry free of it. It preserves
+every invariant: append-only (`put` on an existing id throws), immutable
+(observations deep-frozen on read), audit records returned in append order so
+the hash chain (§7) stays verifiable across process restarts. Further backends
+(Postgres, ...) are adapters that satisfy the same interfaces.
 
 ---
 
@@ -184,6 +197,47 @@ answer. Audit records (see `src/core/audit.ts`) are emitted for:
 Audit records are append-only logs *about the pipeline itself*. They carry no
 recommendation. When an envelope is too malformed to carry an `eventId`, its
 audit records use the sentinel event id `<unknown>`.
+
+### 7.1 Tamper-evidence
+
+Audit records form a **hash chain**. Each record carries `sequence` (0-based
+position), `previousHash` (the prior record's `hash`, or `GENESIS_HASH` for the
+first), and `hash` — over the record's content (key-order-independent) plus its
+`previousHash`. Any edit, insertion, deletion, or reordering breaks the chain:
+`verifyAuditChain(records)` recomputes every hash and checks sequence contiguity
+and link continuity, returning the first index that fails.
+
+The chain is maintained by the single audit write path (`AuditEmitter`): emits
+are serialized so the chain is well-formed under concurrent ingest, and the
+head is **seeded from the store's tail** on first use, so an emitter attached to
+a store that already holds records (e.g. after a restart on SQLite) continues
+the existing chain rather than forking it. A failed append does not advance the
+chain, so it leaves no gap. The stores independently enforce append-only
+ordering (the in-memory store requires the sequence to advance; SQLite has
+`UNIQUE` constraints on audit `id` and `sequence`), so a genuinely forked chain
+— e.g. two emitters seeded from the same tail — fails loudly instead of silently
+corrupting the trail.
+
+**Trust model.** By default the hash is a plain SHA-256, which makes the chain
+**tamper-evident, not tamper-proof**: it reliably detects in-place edits,
+reordering, and deletion by anyone who does not recompute the chain, but the
+hash function is public, so an adversary with write access and the code could
+fabricate an internally-consistent chain. For deployments that do not trust the
+store, pass an `auditSecret`: hashes become keyed HMAC-SHA256 that cannot be
+reproduced — and thus a chain cannot be forged — without the key (verify with
+the same key). Independently, the head hash (`records.at(-1)?.hash`) can be
+periodically anchored in an external trust boundary. `computeAuditHash`,
+`stableStringify`, and `GENESIS_HASH` are **frozen wire contracts**: their exact
+output is part of the audit format so records hashed under one build re-verify
+under another.
+
+### 7.2 Export
+
+`exportAuditNdjson(records)` serializes a trail as newline-delimited JSON, the
+lingua franca for shipping into a SIEM or log pipeline. The hash-chain fields
+travel with each record, so the destination can re-verify integrity with
+`verifyAuditChain`. Transport (to a SIEM, object store, etc.) lives outside the
+core — Observe emits the bytes; it does not push them anywhere.
 
 ---
 
@@ -207,32 +261,64 @@ Invariants: records are immutable, ids are deterministic, and every observation
 names the exact contract versions that produced it. Evolution happens by
 appending new-versioned records, never by mutating old ones.
 
+### 8.1 Migration, backfill & re-normalization
+
+Because observations are immutable and their id is scoped by normalization
+version, "changing how we normalize" is never an in-place edit. The playbook:
+
+- **Adding a `kind` or a new `schemaVersion`** is purely additive — register a
+  validator. Existing observations are untouched; new events flow through the
+  new validator. No migration.
+- **Changing how an existing `kind` normalizes** is a **normalization-version
+  bump**. Ship the new-version normalizer; from then on, new events produce
+  observations under the new version. Old observations remain valid, immutable,
+  and tagged with the old version.
+- **Backfill** (re-deriving history under the new version) is an explicit,
+  auditable action, not an automatic rewrite. Because an `Observation` does not
+  retain its source payload, backfill needs the **original events** — replayed
+  from upstream, or from a raw-event archive the operator keeps outside the
+  core. Feed them through `renormalize(events, { normalizationVersion, ... })`,
+  a pure, storage-free, dry-runnable pass that returns the new observations
+  (with new, version-scoped ids) and any rejections. Then `put` them: they
+  **coexist** with the old-version observations rather than overwriting them.
+- **Reading across versions.** Since both versions' observations share
+  `sourceEventId` and `type` but differ in `id` and `versions.normalization`, a
+  reader chooses which normalization version to consult; a cutover is a reader
+  policy, and the old records can be retired on the operator's schedule.
+
+The design deliberately keeps re-normalization *outside* automatic ingest: a
+backfill that silently rewrote history would violate immutability and make the
+audit trail lie. Observe gives you the primitive (`renormalize`) and the
+guarantees (new ids, coexistence, provenance); the orchestration of a migration
+is an operational decision.
+
 ---
 
 ## 9. Deliberate boundaries & limitations
 
 Choices made for v0, recorded so they stay intentional:
 
-1. **Timestamp parsing** uses the runtime's `Date.parse` (ISO-8601). A date-time
-   without a timezone offset is runtime-interpreted and thus non-canonical
-   across machines; connectors are expected to emit offset-qualified instants
-   (our examples use `Z`). Making Observe *reject* offset-less date-times is a
-   candidate hardening for a future normalization version — deferred rather than
-   guessed, because it is a normalization-version-bumping behavior change.
+1. **Timestamps** are enforced to RFC 3339 with a mandatory timezone offset by
+   default (§3.1), so canonical `at` values are region-independent. The
+   `"lenient"` policy is an explicit, documented opt-out; use it knowingly.
 2. **Single-writer assumption.** `ingest` is safe to call sequentially (and
    `ingestAll` guarantees order for dedupe determinism). The in-memory store is
-   not designed for concurrent `ingest` of the *same* event id in flight; a
-   persistent adapter with atomic insert-if-absent would lift this.
-5. **Infrastructure errors vs input rejections.** Every *input-level* outcome is
+   not designed for concurrent `ingest` of the *same* event id in flight; the
+   SQLite adapter's `UNIQUE` constraint makes a duplicate `put` fail atomically,
+   but a fully concurrent-safe check-then-write across processes would need an
+   adapter-level upsert. The audit emitter serializes its own writes, so the
+   hash chain is safe under concurrent ingest within a process.
+3. **Infrastructure errors vs input rejections.** Every *input-level* outcome is
    returned as an `IngestResult` (`accepted` / `duplicate` / `rejected` /
    `skipped`) — a bad event is never thrown. `ingest` may still reject its
    promise if a storage or audit *adapter* throws (disk full, lost connection,
    append-only violation). That is deliberately kept distinct: reporting an
    infrastructure failure as a `rejected` input would wrongly tell the caller
    the event was invalid. Adapter failures are the caller's to handle or retry.
-3. **Audit record ids** are random UUIDs (audit is a log, not addressed by id);
-   only observation ids are deterministic.
-4. **Attributes are JSON.** Observation attributes and audit details are plain
+4. **Audit record ids** are random UUIDs (audit is a log, not addressed by id);
+   only observation ids are deterministic. Integrity is guaranteed by the hash
+   chain (§7.1), not by the id.
+5. **Attributes are JSON.** Observation attributes and audit details are plain
    JSON so observations stay serializable, comparable, and storage-agnostic.
 
 ---
@@ -256,6 +342,7 @@ src/
     ids.ts           # deterministic observation id
     clock.ts         # injectable clock
     freeze.ts        # deep freeze
+    audit-chain.ts   # hash-chain compute & verify
   validate/      # the input-side extension point
     validator.ts     # Validator interface
     registry.ts      # (kind, schemaVersion) registry
@@ -263,18 +350,22 @@ src/
   normalize/     # envelope parsing, attribution, normalization
     envelope.ts
     resolver.ts      # attribution seam (default identity)
+    timestamp.ts     # RFC 3339 timestamp policy
     normalizer.ts    # validation + normalization + attribution
-  storage/       # interfaces + in-memory defaults
-    store.ts
-    memory.ts
+  storage/       # interfaces + adapters
+    store.ts         # interfaces + shared query validation
+    memory.ts        # in-memory default
+    sqlite.ts        # SQLite adapter (@octopus/observe/sqlite)
   audit/
-    emitter.ts       # stamps & writes audit records
+    emitter.ts       # stamps, hash-chains & writes audit records
+    export.ts        # NDJSON / SIEM export
   api/
     read.ts          # read-only query API
   observations/  # example validators (illustrative, not canonical)
+  migrate.ts     # renormalize (backfill primitive)
   observe.ts     # the Observe pipeline (orchestration)
   cli.ts         # runnable CLI
-  index.ts       # public surface
+  index.ts       # public surface (core; SQLite is a separate entry point)
 ```
 
 ---
