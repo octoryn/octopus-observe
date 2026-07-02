@@ -179,6 +179,49 @@ every invariant: append-only (`put` on an existing id throws), immutable
 the hash chain (§7) stays verifiable across process restarts. Further backends
 (Postgres, ...) are adapters that satisfy the same interfaces.
 
+### 6.1 Raw-event archive (optional, separate port)
+
+`RawEventArchive` is an **optional** port, separate from the observation and
+audit stores. It is a faithful, append-only **tape of raw inputs** as received
+at the boundary — untrusted, un-normalized, in arrival order. Its sole purpose
+is to give backfill (§8.1) a source of the original events, since an
+`Observation` does not retain its source payload.
+
+Boundary discipline — the archive must never pollute the observation line:
+
+- The archive holds **raw input**, never canonical observations. The two never
+  mix types or tables.
+- Attaching an archive **does not change the observations Observe produces** —
+  the observation is byte-identical with or without it (verified by test). The
+  archive is written first, purely as a side-channel.
+- The archive **normalizes nothing**. Replayed events go back through
+  `renormalize`; the archive is dumb storage.
+- A failed archive write is an infrastructure error (§9.3) surfaced to the
+  caller, so the tape is never silently skipped while an observation is stored.
+
+In-memory and SQLite implementations ship in-repo; `createSqliteStores` returns
+one alongside the observation and audit stores, sharing the connection.
+
+Properties and operational notes:
+
+- **Sequence** is a monotonically-increasing, unique, opaque ordinal (in-memory
+  0-based, SQLite 1-based via `AUTOINCREMENT`). It is **never reused**, even
+  after rows are pruned, so a bookmark (`fromSequence`) can never silently
+  skip or double-count. Do not assume a starting value or gap-freeness.
+- **Faithful copy.** Events are stored as a JSON copy immune to later caller
+  mutation; both backends use identical `JSON.stringify` semantics. Inputs must
+  therefore be JSON-serializable — a non-serializable input (a `bigint`, a
+  circular object) fails archival as an infrastructure error rather than being
+  stored lossily.
+- **Compliance surface.** Unlike the audit chain (which stores reasons/detail,
+  never payloads), the archive is a **full plaintext tape of raw inputs** — it
+  may contain PII or secrets. Attaching one changes the deployment's
+  data-retention profile: apply encryption/access-control per policy, and note
+  that retention/erasure deletes are safe here (the never-reused sequence means
+  pruning leaves harmless gaps and never wedges future appends). Growth is
+  unbounded by default (one payload per ingested event, including rejected
+  ones); retention/compaction is an operator concern, as with the audit trail.
+
 ---
 
 ## 7. Audit
@@ -275,12 +318,13 @@ version, "changing how we normalize" is never an in-place edit. The playbook:
   and tagged with the old version.
 - **Backfill** (re-deriving history under the new version) is an explicit,
   auditable action, not an automatic rewrite. Because an `Observation` does not
-  retain its source payload, backfill needs the **original events** — replayed
-  from upstream, or from a raw-event archive the operator keeps outside the
-  core. Feed them through `renormalize(events, { normalizationVersion, ... })`,
+  retain its source payload, backfill needs the **original events** — from the
+  optional `RawEventArchive` (§6.1) if one was attached, or replayed from
+  upstream. Feed them through `renormalize(events, { normalizationVersion, ... })`,
   a pure, storage-free, dry-runnable pass that returns the new observations
   (with new, version-scoped ids) and any rejections. Then `put` them: they
   **coexist** with the old-version observations rather than overwriting them.
+  The end-to-end shape is `archive.replay()` → `renormalize` → `store.put`.
 - **Reading across versions.** Since both versions' observations share
   `sourceEventId` and `type` but differ in `id` and `versions.normalization`, a
   reader chooses which normalization version to consult; a cutover is a reader
@@ -375,7 +419,8 @@ src/
 Exactly three, and no more. Everything else is closed.
 
 1. **Validators** (`validate/`) — add an input kind / schema version.
-2. **Storage adapters** (`storage/store.ts`) — swap persistence.
+2. **Storage adapters** (`storage/store.ts`) — swap persistence for the
+   observation store, audit store, and the optional `RawEventArchive` port.
 3. **Resolver** (`normalize/resolver.ts`) — cross-source identity resolution.
 
 Connectors are explicitly *not* an extension point here; they live outside the

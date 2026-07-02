@@ -3,11 +3,15 @@ import type { Observation } from "../core/observation.js";
 import type { AuditRecord } from "../core/audit.js";
 import { deepFreeze } from "../core/freeze.js";
 import {
+  type ArchivedEvent,
   type AuditQuery,
   type AuditStore,
   type ObservationQuery,
   type ObservationStore,
+  type RawEventArchive,
+  type ReplayQuery,
   assertValidObservationQuery,
+  assertValidReplayQuery,
 } from "./store.js";
 
 /**
@@ -27,18 +31,21 @@ function isUniqueViolation(error: unknown): boolean {
   return error instanceof Error && /UNIQUE constraint failed/i.test(error.message);
 }
 
-/** Open one SQLite connection and return both stores backed by it. */
+/** Open one SQLite connection and return the stores backed by it. */
 export interface SqliteStores {
   readonly db: DatabaseSync;
   readonly observations: SqliteObservationStore;
   readonly audit: SqliteAuditStore;
+  /** The optional raw-event archive, backed by the same connection. */
+  readonly rawEvents: SqliteRawEventArchive;
   /** Close the underlying database connection. */
   close(): void;
 }
 
 /**
- * Open a SQLite-backed observation and audit store pair sharing one connection.
- * Pass a file path for durable storage or `":memory:"` for an ephemeral db.
+ * Open SQLite-backed stores (observations, audit, and a raw-event archive)
+ * sharing one connection. Pass a file path for durable storage or `":memory:"`
+ * for an ephemeral db.
  */
 export function createSqliteStores(location: string): SqliteStores {
   const db = new DatabaseSync(location);
@@ -47,6 +54,7 @@ export function createSqliteStores(location: string): SqliteStores {
     db,
     observations: new SqliteObservationStore(db),
     audit: new SqliteAuditStore(db),
+    rawEvents: new SqliteRawEventArchive(db),
     close: () => db.close(),
   };
 }
@@ -253,5 +261,67 @@ export class SqliteAuditStore implements AuditStore {
     return Promise.resolve(
       row === undefined ? undefined : deepFreeze(JSON.parse(row.data) as AuditRecord),
     );
+  }
+}
+
+/** SQLite-backed {@link RawEventArchive}. A durable, ordered tape of raw inputs. */
+export class SqliteRawEventArchive implements RawEventArchive {
+  constructor(private readonly db: DatabaseSync) {
+    // AUTOINCREMENT guarantees sequences are monotonic and never reused, even
+    // after rows are pruned — so retention/erasure deletes are safe and can
+    // never wedge future appends or silently reuse a bookmarked sequence.
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS raw_events (
+        sequence    INTEGER PRIMARY KEY AUTOINCREMENT,
+        received_at INTEGER NOT NULL,
+        event       TEXT NOT NULL
+      );
+    `);
+  }
+
+  archive(event: unknown, receivedAt: number): Promise<ArchivedEvent> {
+    const json = JSON.stringify(event);
+    const stored = json === undefined ? "null" : json;
+    const info = this.db
+      .prepare("INSERT INTO raw_events (received_at, event) VALUES (?, ?)")
+      .run(receivedAt, stored);
+    const sequence = Number(info.lastInsertRowid);
+    return Promise.resolve({ sequence, receivedAt, event: JSON.parse(stored) as unknown });
+  }
+
+  replay(query: ReplayQuery = {}): Promise<readonly ArchivedEvent[]> {
+    try {
+      assertValidReplayQuery(query);
+    } catch (error) {
+      return Promise.reject(error as Error);
+    }
+    const params: number[] = [];
+    let sql = "SELECT sequence, received_at, event FROM raw_events";
+    if (query.fromSequence !== undefined) {
+      sql += " WHERE sequence >= ?";
+      params.push(query.fromSequence);
+    }
+    sql += " ORDER BY sequence ASC";
+    if (query.limit !== undefined) {
+      sql += " LIMIT ?";
+      params.push(query.limit);
+    }
+    const rows = this.db.prepare(sql).all(...params) as {
+      sequence: number;
+      received_at: number;
+      event: string;
+    }[];
+    return Promise.resolve(
+      rows.map((row) => ({
+        sequence: row.sequence,
+        receivedAt: row.received_at,
+        event: JSON.parse(row.event) as unknown,
+      })),
+    );
+  }
+
+  count(): Promise<number> {
+    const row = this.db.prepare("SELECT COUNT(*) AS c FROM raw_events").get() as { c: number };
+    return Promise.resolve(row.c);
   }
 }

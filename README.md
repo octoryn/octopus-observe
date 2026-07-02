@@ -31,7 +31,7 @@ connector SDK.
 ```bash
 npm install
 npm run typecheck   # tsc --noEmit
-npm test            # node --test (68 tests)
+npm test            # node --test (87 tests)
 npm run build       # emit dist/
 ```
 
@@ -169,31 +169,50 @@ const observe = new Observe({ validators, auditSecret: process.env.AUDIT_KEY });
 verifyAuditChain(await observe.read.queryAudit(), process.env.AUDIT_KEY);
 ```
 
+## Raw-event archive (optional)
+
+Re-normalizing history needs the original events (an observation doesn't retain
+its source payload). Attach an **optional** `RawEventArchive` — a faithful tape
+of raw inputs, kept strictly off the observation line (the observation produced
+is byte-identical whether or not an archive is attached, and the archive holds
+raw input, never observations):
+
+```ts
+import { Observe, InMemoryRawEventArchive } from "@octopus/observe";
+// or use the durable one: createSqliteStores(...).rawEvents
+
+const archive = new InMemoryRawEventArchive();
+const observe = new Observe({ validators, rawEventArchive: archive });
+```
+
 ## Backfill / re-normalization
 
 Observations are immutable and their id is scoped by normalization version, so
 re-normalizing under a new version produces **new, coexisting** observations
 rather than rewriting history. `renormalize` is the pure, dry-runnable primitive
-(replay the original events through it, then `put` the results):
+— replay the archive (or an upstream source) through it, then `put` the results:
 
 ```ts
 import { renormalize } from "@octopus/observe";
 
-const { observations, rejections } = renormalize(originalEvents, {
-  validators,
-  normalizationVersion: "2.0",
-});
+const archived = await archive.replay();
+const { observations, rejections } = renormalize(
+  archived.map((e) => e.event),
+  { validators, normalizationVersion: "2.0" },
+);
 ```
 
-See [`docs/DESIGN.md`](docs/DESIGN.md) §8.1 for the full migration playbook.
+The end-to-end shape is `archive.replay()` → `renormalize` → `store.put`. See
+[`docs/DESIGN.md`](docs/DESIGN.md) §6.1 and §8.1 for the boundary discipline and
+the full migration playbook.
 
 ## Extension points
 
 Exactly three — everything else is closed:
 
 1. **Validators** — add input kinds / schema versions.
-2. **Storage adapters** — implement `ObservationStore` / `AuditStore` (an
-   in-memory default ships in-repo).
+2. **Storage adapters** — implement `ObservationStore` / `AuditStore` / the
+   optional `RawEventArchive` (in-memory and SQLite defaults ship in-repo).
 3. **Resolver** — implement `Resolver` for cross-source identity resolution (the
    default is pass-through identity).
 

@@ -115,6 +115,79 @@ test("SQLite audit store rejects duplicate ids and sequences (forked chain)", as
   }
 });
 
+test("SQLite raw-event archive tapes, replays, and drives backfill", async () => {
+  const stores = createSqliteStores(":memory:");
+  try {
+    const observe = new Observe({
+      validators: exampleValidators,
+      observationStore: stores.observations,
+      auditStore: stores.audit,
+      rawEventArchive: stores.rawEvents,
+      clock: fixedClock(FIXED_NOW),
+    });
+    await observe.ingest(reviewEvent({ eventId: "a" }));
+    await observe.ingest({ garbage: true }); // rejected but still taped
+    assert.equal(await stores.rawEvents.count(), 2);
+
+    const taped = await stores.rawEvents.replay();
+    assert.equal(taped.length, 2);
+    // Sequence is an opaque, strictly-increasing ordinal (1-based in SQLite).
+    assert.ok((taped[0] as { sequence: number }).sequence < (taped[1] as { sequence: number }).sequence);
+    assert.deepEqual(taped[1]?.event, { garbage: true });
+
+    await assert.rejects(() => stores.rawEvents.replay({ limit: -1 }), RangeError);
+    await assert.rejects(() => stores.rawEvents.replay({ limit: 1.5 }), RangeError);
+    await assert.rejects(() => stores.rawEvents.replay({ fromSequence: -1 }), RangeError);
+  } finally {
+    stores.close();
+  }
+});
+
+test("pruning the archive never wedges or reuses a sequence", async () => {
+  const stores = createSqliteStores(":memory:");
+  try {
+    const a = await stores.rawEvents.archive({ n: 0 }, 0);
+    await stores.rawEvents.archive({ n: 1 }, 1);
+    // Retention/PII purge of an old row must be safe.
+    stores.db.exec(`DELETE FROM raw_events WHERE sequence = ${a.sequence}`);
+    const c = await stores.rawEvents.archive({ n: 2 }, 2); // must not throw
+    // New sequence is strictly greater than any ever used — never reused.
+    assert.ok(c.sequence > a.sequence + 1);
+    assert.equal(await stores.rawEvents.count(), 2);
+  } finally {
+    stores.close();
+  }
+});
+
+test("raw-event archive survives a reconnect", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "observe-archive-"));
+  const file = join(dir, "observe.db");
+  try {
+    {
+      const stores = createSqliteStores(file);
+      const observe = new Observe({
+        validators: exampleValidators,
+        observationStore: stores.observations,
+        auditStore: stores.audit,
+        rawEventArchive: stores.rawEvents,
+        clock: fixedClock(FIXED_NOW),
+      });
+      await observe.ingest(reviewEvent({ eventId: "a" }));
+      stores.close();
+    }
+    const stores2 = createSqliteStores(file);
+    try {
+      assert.equal(await stores2.rawEvents.count(), 1);
+      const replayed = await stores2.rawEvents.replay();
+      assert.equal((replayed[0]?.event as { eventId: string }).eventId, "a");
+    } finally {
+      stores2.close();
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("data and the audit chain survive a reconnect", async () => {
   const dir = mkdtempSync(join(tmpdir(), "observe-sqlite-"));
   const file = join(dir, "observe.db");

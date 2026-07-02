@@ -97,3 +97,65 @@ export interface AuditStore {
    */
   tail(): Promise<AuditRecord | undefined>;
 }
+
+/**
+ * One raw input as received at the boundary, wrapped with archival metadata.
+ * The `event` is the untrusted input verbatim — the archive is a faithful tape,
+ * not a normalized record.
+ */
+export interface ArchivedEvent {
+  /**
+   * Archive position, assigned by the archive. A monotonically-increasing,
+   * unique ordinal — treat it as opaque for `fromSequence` bookmarks. Do not
+   * assume a particular starting value or that it is gap-free: the in-memory
+   * archive is 0-based, the SQLite archive is 1-based, and pruning may leave
+   * gaps (a pruned sequence is never reused).
+   */
+  readonly sequence: number;
+  /** When the event was received (epoch milliseconds, from the clock). */
+  readonly receivedAt: number;
+  /** The raw input as received (JSON value). */
+  readonly event: unknown;
+}
+
+/** Query over the raw-event archive, by archive sequence. */
+export interface ReplayQuery {
+  /** Only events at or after this archive sequence (inclusive). */
+  readonly fromSequence?: number;
+  /** Maximum number of events. */
+  readonly limit?: number;
+}
+
+/**
+ * Reject malformed replay bounds, so archive backends behave identically on bad
+ * input rather than diverging (`slice` vs `LIMIT` semantics). Every
+ * `RawEventArchive` implementation should call this at the start of `replay`.
+ */
+export function assertValidReplayQuery(query: ReplayQuery): void {
+  for (const key of ["fromSequence", "limit"] as const) {
+    const value = query[key];
+    if (value !== undefined && (!Number.isInteger(value) || value < 0)) {
+      throw new RangeError(`ReplayQuery.${key} must be a non-negative integer`);
+    }
+  }
+}
+
+/**
+ * Append-only archive of raw events — an **optional, separate port** from the
+ * observation and audit stores.
+ *
+ * It exists so that backfill / re-normalization has a source of the original
+ * events (an `Observation` does not retain its source payload). It is
+ * deliberately kept off the observation line: attaching an archive never
+ * changes the observations Observe produces, and the archive holds untrusted
+ * raw input, never canonical observations. Replayed events are fed back through
+ * `renormalize` — the archive itself normalizes nothing.
+ */
+export interface RawEventArchive {
+  /** Archive one raw input, returning the stored record (with its sequence). */
+  archive(event: unknown, receivedAt: number): Promise<ArchivedEvent>;
+  /** Replay archived events in sequence order, for backfill. */
+  replay(query?: ReplayQuery): Promise<readonly ArchivedEvent[]>;
+  /** Total number of archived events. */
+  count(): Promise<number>;
+}

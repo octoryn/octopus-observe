@@ -13,7 +13,7 @@ import {
   InMemoryAuditStore,
   InMemoryObservationStore,
 } from "./storage/memory.js";
-import type { AuditStore, ObservationStore } from "./storage/store.js";
+import type { AuditStore, ObservationStore, RawEventArchive } from "./storage/store.js";
 import { AuditEmitter } from "./audit/emitter.js";
 import { ReadApi } from "./api/read.js";
 
@@ -28,6 +28,13 @@ export interface ObserveOptions {
   readonly observationStore?: ObservationStore;
   /** Audit store. Defaults to an in-memory store. */
   readonly auditStore?: AuditStore;
+  /**
+   * Optional raw-event archive. When provided, every raw input is taped to it
+   * (before normalization) so backfill / re-normalization has a source of the
+   * original events. Attaching an archive never changes the observations Observe
+   * produces — it is a separate side-channel, not part of the observation line.
+   */
+  readonly rawEventArchive?: RawEventArchive;
   /** Attribution resolver. Defaults to the identity resolver. */
   readonly resolver?: Resolver;
   /** Time source. Defaults to the system clock. */
@@ -87,6 +94,8 @@ export class Observe {
   private readonly normalizer: Normalizer;
   private readonly emitter: AuditEmitter;
   private readonly observationStore: ObservationStore;
+  private readonly rawEventArchive: RawEventArchive | undefined;
+  private readonly clock: Clock;
   private readonly onUnknownKind: UnknownKindPolicy;
   /** Read-only access to stored observations and their audit trail. */
   readonly read: ReadApi;
@@ -98,6 +107,8 @@ export class Observe {
     const clock = options.clock ?? systemClock;
 
     this.observationStore = observationStore;
+    this.rawEventArchive = options.rawEventArchive;
+    this.clock = clock;
     this.onUnknownKind = options.onUnknownKind ?? "reject";
     this.emitter = new AuditEmitter(auditStore, clock, options.auditSecret);
     this.normalizer = new Normalizer({
@@ -123,6 +134,14 @@ export class Observe {
    * throw on an append-only violation, which the dedupe step prevents.
    */
   async ingest(input: unknown): Promise<IngestResult> {
+    // Tape the raw input first, if an archive is attached. This is a separate
+    // side-channel: it never affects the observation produced below. A failed
+    // archive is an infrastructure error (surfaced to the caller), so we never
+    // silently drop from the tape while proceeding to store an observation.
+    if (this.rawEventArchive !== undefined) {
+      await this.rawEventArchive.archive(input, this.clock());
+    }
+
     const result = this.normalizer.normalize(input);
 
     if (!result.ok) {

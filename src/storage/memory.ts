@@ -2,13 +2,27 @@ import type { Observation } from "../core/observation.js";
 import type { TaggedRef } from "../core/refs.js";
 import type { AuditRecord } from "../core/audit.js";
 import {
+  type ArchivedEvent,
   type AuditQuery,
   type AuditStore,
   type ObservationQuery,
   type ObservationStore,
+  type RawEventArchive,
   type RefMatch,
+  type ReplayQuery,
   assertValidObservationQuery,
+  assertValidReplayQuery,
 } from "./store.js";
+
+/**
+ * JSON-normalize a raw event for archival: a faithful, storage-agnostic copy
+ * that later mutation of the caller's object cannot alter. Values outside JSON
+ * (`undefined`, functions) archive as `null`, matching the SQLite adapter.
+ */
+function jsonCopy(event: unknown): unknown {
+  const json = JSON.stringify(event);
+  return json === undefined ? null : (JSON.parse(json) as unknown);
+}
 
 function refMatches(refs: readonly TaggedRef[], match: RefMatch): boolean {
   return refs.some(
@@ -137,5 +151,42 @@ export class InMemoryAuditStore implements AuditStore {
 
   tail(): Promise<AuditRecord | undefined> {
     return Promise.resolve(this.records[this.records.length - 1]);
+  }
+}
+
+/** In-memory {@link RawEventArchive}. Faithful tape of raw inputs, in order. */
+export class InMemoryRawEventArchive implements RawEventArchive {
+  private readonly events: ArchivedEvent[] = [];
+  /** Monotonic counter — never derived from length, so it never reuses. */
+  private nextSequence = 0;
+
+  archive(event: unknown, receivedAt: number): Promise<ArchivedEvent> {
+    const record: ArchivedEvent = {
+      sequence: this.nextSequence++,
+      receivedAt,
+      event: jsonCopy(event),
+    };
+    this.events.push(record);
+    return Promise.resolve(record);
+  }
+
+  replay(query: ReplayQuery = {}): Promise<readonly ArchivedEvent[]> {
+    try {
+      assertValidReplayQuery(query);
+    } catch (error) {
+      return Promise.reject(error as Error);
+    }
+    let results =
+      query.fromSequence === undefined
+        ? this.events
+        : this.events.filter((e) => e.sequence >= (query.fromSequence as number));
+    if (query.limit !== undefined) {
+      results = results.slice(0, query.limit);
+    }
+    return Promise.resolve([...results]);
+  }
+
+  count(): Promise<number> {
+    return Promise.resolve(this.events.length);
   }
 }
