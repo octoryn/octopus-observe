@@ -267,4 +267,4 @@ storeConformance("postgres", {
 
 ## 许可证 (License)
 
-MIT
+[Apache-2.0](LICENSE) © Octoryn。

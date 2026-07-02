@@ -280,4 +280,4 @@ written against that spec.
 
 ## License
 
-MIT
+[Apache-2.0](LICENSE) © Octoryn.

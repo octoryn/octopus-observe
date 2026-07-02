@@ -11,7 +11,8 @@ Observe 的所有重要变更均记录于此。格式遵循
 
 ### Changed
 - **许可证改为 Apache-2.0**（原为 MIT）—— 一个带专利授权的宽松许可证，为让这个库
-  能被广泛嵌入而选择。
+  能被广泛嵌入而选择。（README "许可证" 一节在改版后仍写着 `MIT`，已更正为
+  Apache-2.0，与 `LICENSE` 文件、`package.json` 及 badge 保持一致。）
 - **包名改为 `octopus-observe`**（非 scope），与 Octoryn 生态约定一致
   （如 `octopus-scout`）。导入为 `octopus-observe`、`octopus-observe/sqlite`、
   `octopus-observe/conformance`；CLI bin 为 `octopus-observe`。
