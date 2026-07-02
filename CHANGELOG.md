@@ -10,9 +10,8 @@ independent adversarial ("red-team") review before landing.
 ## [0.7.0] — 2026-07-02
 
 ### Changed
-- **License is now AGPL-3.0-or-later** (was MIT), aligning with the Octoryn
-  ecosystem. If you need a permissive license for embedding, raise it before
-  depending on this version.
+- **License is now Apache-2.0** (was MIT) — a permissive, patent-grant license
+  chosen for broad embeddability of this library.
 
 ### Added
 - **Open-source release packaging** to the ecosystem standard: full
