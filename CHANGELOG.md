@@ -5,6 +5,23 @@ All notable changes to Observe are documented here. The format follows
 semantic versioning once it reaches 1.0. Every release was hardened by an
 independent adversarial ("red-team") review before landing.
 
+## [0.6.0] — 2026-07-02
+
+### Added
+- **Adversarial boundary fuzzing.** A property-based suite feeds thousands of
+  hostile/random inputs (malformed envelopes, non-finite numbers, `undefined`,
+  hostile keys like `__proto__`, deep nesting, unicode) — keyed and unkeyed —
+  through `ingest` and asserts the core promises of a trusted entry layer:
+  `ingest` never throws (every outcome is a returned result), every accepted
+  observation self-verifies (including after a JSON round-trip), re-ingest is
+  idempotent, the audit hash chain stays valid over the entire hostile run, and
+  there is no prototype pollution. Runs from a fixed seed so any failure is
+  reproducible.
+
+### Changed
+- Package `version` aligned to the changelog (was `0.1.0`) for the first
+  publishable release.
+
 ## [0.5.0] — 2026-07-02
 
 ### Added

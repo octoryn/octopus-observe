@@ -31,7 +31,7 @@ connector SDK.
 ```bash
 npm install
 npm run typecheck   # tsc --noEmit
-npm test            # node --test (131 tests)
+npm test            # node --test (138 tests)
 npm run build       # emit dist/
 ```
 
