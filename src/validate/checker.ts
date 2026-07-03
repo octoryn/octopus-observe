@@ -1,4 +1,5 @@
 import type { JsonObject, JsonValue } from "../core/json.js";
+import { asJsonValue } from "../core/json.js";
 import type { ValidationIssue } from "../core/rejection.js";
 import type { ValidationResult } from "./validator.js";
 
@@ -111,6 +112,29 @@ export class PayloadChecker {
     }
     this.attributes[field] = value;
     return value as T;
+  }
+
+  /**
+   * Require an arbitrary, open-ended JSON value (object, array, or primitive).
+   *
+   * Unlike the typed field helpers this places no shape constraint on the
+   * value beyond being finite, plain JSON — useful for genuinely open fields
+   * such as tool arguments or results. The value is coerced to its canonical,
+   * storage-safe form (see {@link asJsonValue}) before being recorded.
+   */
+  json(field: string, opts: { readonly optional?: boolean } = {}): JsonValue | undefined {
+    const value = this.read(field);
+    if (value === undefined) {
+      if (!opts.optional) this.fail(field, "is required");
+      return undefined;
+    }
+    const coerced = asJsonValue(value);
+    if (coerced === undefined) {
+      this.fail(field, "must be a JSON value");
+      return undefined;
+    }
+    this.attributes[field] = coerced;
+    return coerced;
   }
 
   /** Set a computed attribute that is not a direct payload field. */

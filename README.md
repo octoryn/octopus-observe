@@ -43,7 +43,7 @@ connector SDK.
 ```bash
 npm install
 npm run typecheck   # tsc --noEmit
-npm test            # node --test (138 tests)
+npm test            # node --test (148 tests)
 npm run build       # emit dist/
 ```
 
@@ -106,6 +106,34 @@ octopus-observe events.ndjson
 ```
 
 Exit code is `1` if any event was rejected, `0` otherwise.
+
+## Agent events (ready-made intake)
+
+You don't have to hand-write intake for the agent stack. Two built-in adapters
+turn common agent happenings into canonical, ingestible `ObservationEvent`s:
+
+```ts
+import { Observe, exampleValidators, mcpToolCallEvent, agentEventValidators } from "octopus-observe";
+
+const observe = new Observe({ validators: [...exampleValidators, ...agentEventValidators] });
+
+await observe.ingest(
+  mcpToolCallEvent({
+    tool: "search",
+    server: "docs",
+    args: { query: "cats" },
+    result: { hits: 3 },
+    actor: { id: "claude-code" },
+    occurredAt: "2026-07-03T09:30:00.000Z",
+  }),
+); // → accepted as an "AgentToolCalled" observation
+```
+
+`mcpToolCallEvent(...)` and `agentActionEvent(...)` build valid, frozen envelopes
+(deterministic ids that fold the payload, so distinct calls don't collide);
+register `agentEventValidators` so they're accepted. The boundary is unchanged —
+these only construct the `ObservationEvent`; ingestion, dedupe, and audit are
+identical to any other event.
 
 ## Defining your own observation types
 

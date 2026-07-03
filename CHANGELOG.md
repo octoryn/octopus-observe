@@ -7,6 +7,29 @@ All notable changes to Observe are documented here. The format follows
 semantic versioning once it reaches 1.0. Every release was hardened by an
 independent adversarial ("red-team") review before landing.
 
+## [0.8.0] — 2026-07-03
+
+### Added
+
+- **Agent-events connector** (`octopus-observe` root exports) — first-class
+  adapters that map agent-stack events into canonical `ObservationEvent`s, so you
+  no longer hand-write intake: `mcpToolCallEvent(...)` (an MCP tool call) and
+  `agentActionEvent(...)` (a generic agent action), with matching validators
+  (`agentToolCalledValidator`, `agentActionValidator`, bundled as
+  `agentEventValidators`) so the output ingests and is accepted (as
+  `AgentToolCalled` / `AgentAction`). Additive helpers `asJsonValue`
+  (storage-safe JSON coercion for open-ended tool args/results) and
+  `PayloadChecker.json()`. Zero new dependencies; no existing hashes, ids, or
+  audit format changed. Register with `[...exampleValidators, ...agentEventValidators]`.
+
+### Fixed
+
+- Derived event ids now fold the canonical payload, so two structurally-distinct
+  agent events at the same millisecond (e.g. the same tool called with different
+  args) no longer collide and get silently dropped as duplicates. An invalid
+  `occurredAt` Date no longer throws — it flows through and cleanly fails
+  timestamp validation instead.
+
 ## [0.7.1] — 2026-07-02
 
 ### Fixed

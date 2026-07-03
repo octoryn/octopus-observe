@@ -103,3 +103,18 @@ export {
   deployFinishedValidator,
   issueOpenedValidator,
 } from "./observations/index.js";
+
+// Agent-stack observation types + their intake adapters. The validators accept
+// the events the adapters produce; register them alongside your own.
+export {
+  agentEventValidators,
+  agentToolCalledValidator,
+  agentActionValidator,
+} from "./observations/index.js";
+export {
+  mcpToolCallEvent,
+  agentActionEvent,
+  AGENT_TOOL_CALLED_KIND,
+  AGENT_ACTION_KIND,
+} from "./connectors/agent-events.js";
+export type { AgentActor, McpToolCallInput, AgentActionInput } from "./connectors/agent-events.js";
