@@ -7,6 +7,41 @@ Observe 的所有重要变更均记录于此。格式遵循
 语义化版本（semantic versioning）。每个版本在发布前都经过了一次独立的
 对抗性（"红队"）评审加固。
 
+## [0.9.0] — 2026-07-03
+
+### 新增
+
+- **`toEvidence` 桥**（`octopus-observe` 根导出）—— 将规范化的 `Observation`
+  投射为可验证的 [`octopus-evidence`](https://github.com/octoryn/octopus-evidence)
+  `Evidence` 信封,使一条观测能够作为一等、可独立验证的证据继续在栈中流动。
+  映射:`kind` = `observation:<type>`、subjects → evidence `Ref`、首个 actor →
+  `Ref`、`attributes` → `content`、`provenance` = `{ source, at }`;可选的
+  `integritySecret` 直接透传给 `createEvidence`。这让"Observe = 证据采集"成为
+  依赖图中的真实边,而非仅是叙事。既有行为、id、哈希与审计格式均未改变。
+
+### 变更
+
+- 现依赖第一方 `octopus-evidence@^0.2.0`(其**唯一**运行时依赖;仍零第三方依赖)。
+  README 徽章/文案重新表述为"构建于第一方 octopus-evidence 原语之上",与栈其余
+  部分保持一致。
+
+## [0.8.0] — 2026-07-03
+
+### 新增
+
+- **Agent 事件连接器**（`octopus-observe` 根导出）—— 一等适配器,将 agent 栈的
+  事件映射为规范化的 `ObservationEvent`,让 agent/MCP 的工具调用与动作无需手写
+  intake 即可直接进入 Observe:`mcpToolCallEvent` / `agentActionEvent` 构建有效、
+  冻结的信封(确定性 id 会折入 payload,因此不同调用不会碰撞),配套
+  `agentEventValidators` 使其被接受。边界不变 —— 仅构造 `ObservationEvent`;
+  摄取、去重与审计与其他事件完全相同。
+
+### 修复
+
+- **派生 id 碰撞**:同一毫秒、不同参数的两次工具调用曾因 id 相同被当作重复丢弃;
+  现 id 折入 `stableStringify(payload)`,区分不同事件。
+- **无效 Date 崩溃**:非法时间戳(`getTime()` 为 `NaN`)不再抛异常。
+
 ## [0.7.1] — 2026-07-02
 
 ### Fixed

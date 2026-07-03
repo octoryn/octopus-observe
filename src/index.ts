@@ -35,6 +35,11 @@ export { exportAuditNdjson } from "./audit/export.js";
 export { computeObservationHash, verifyObservation } from "./core/observation-integrity.js";
 export type { ObservationContent } from "./core/observation-integrity.js";
 
+// Evidence bridge — project an Observation into a verifiable octopus-evidence
+// Evidence envelope so observations flow through the stack as evidence.
+export { toEvidence } from "./evidence-bridge.js";
+export type { ToEvidenceOptions } from "./evidence-bridge.js";
+
 // Versions.
 export { NORMALIZATION_VERSION, SUPPORTED_ENVELOPE_VERSIONS } from "./core/versions.js";
 export type { EnvelopeVersion } from "./core/versions.js";

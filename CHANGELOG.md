@@ -7,6 +7,27 @@ All notable changes to Observe are documented here. The format follows
 semantic versioning once it reaches 1.0. Every release was hardened by an
 independent adversarial ("red-team") review before landing.
 
+## [0.9.0] — 2026-07-03
+
+### Added
+
+- **`toEvidence` bridge** (`octopus-observe` root export) — projects a canonical
+  `Observation` into a verifiable [`octopus-evidence`](https://github.com/octoryn/octopus-evidence)
+  `Evidence` envelope, so an observation can flow onward through the stack as
+  first-class, independently-verifiable evidence. Maps `kind` =
+  `observation:<type>`, subjects → evidence `Ref`s, first actor → `Ref`,
+  `attributes` → `content`, and `provenance` = `{ source, at }`; an optional
+  `integritySecret` is passed straight through to `createEvidence`. This makes
+  "Observe = evidence collection" a real dependency edge, not just narrative.
+  Existing behavior, ids, hashes, and audit format are unchanged.
+
+### Changed
+
+- Now depends on the first-party `octopus-evidence@^0.2.0` (its **only** runtime
+  dependency; still zero third-party deps). README badge/prose reframed to
+  "built on the first-party octopus-evidence primitive," matching the rest of
+  the stack.
+
 ## [0.8.0] — 2026-07-03
 
 ### Added

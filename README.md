@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/octoryn/octopus-observe?sort=semver)](https://github.com/octoryn/octopus-observe/releases/latest)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](.nvmrc)
-[![Zero runtime deps](https://img.shields.io/badge/runtime%20deps-0-success.svg)](package.json)
+[![Built on octopus-evidence](https://img.shields.io/badge/built%20on-octopus--evidence-7c9cff.svg)](https://github.com/octoryn/octopus-evidence)
 
 > Standalone observation intake and normalization. Observe turns raw external
 > events into **trusted, canonical, immutable observations** — and nothing more.
@@ -33,17 +33,23 @@ experience, or derive organizational signals. Deriving signals (review-latency
 trends, ownership drift, health indices) is a *downstream* system that consumes
 Observe's output. Observe stops at the canonical observation.
 
-It has **zero runtime dependencies** and **no dependency** on
-`octopus-blackboard`, `octopus-experience`, or any workflow runtime. The repo is
-fully usable on its own. The boundary is the `ObservationEvent` shape — not any
+It has **no dependency** on `octopus-blackboard`, `octopus-experience`, or any
+workflow runtime. The boundary is the `ObservationEvent` shape — not any
 connector SDK.
+
+It has **zero third-party dependencies**: its only runtime dependency is the
+first-party [`octopus-evidence`](https://github.com/octoryn/octopus-evidence)
+primitive (itself zero-dependency), which provides the canonical hashing the
+whole stack shares — and which the `toEvidence` bridge uses to project an
+observation into a verifiable `Evidence` envelope. The repo is otherwise fully
+usable on its own.
 
 ## Install & build
 
 ```bash
 npm install
 npm run typecheck   # tsc --noEmit
-npm test            # node --test (148 tests)
+npm test            # node --test (154 tests)
 npm run build       # emit dist/
 ```
 
