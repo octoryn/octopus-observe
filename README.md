@@ -53,8 +53,9 @@ npm test            # node --test (154 tests)
 npm run build       # emit dist/
 ```
 
-Requires Node ≥ 20. The optional SQLite adapter uses Node's built-in
-`node:sqlite` and works on Node ≥ 22.
+Requires Node ≥ 20. CI verifies Node 20 / 22 / 24; the repo `.nvmrc` pins Node
+22 as the maintainer default because the optional SQLite adapter uses Node's
+built-in `node:sqlite` and works on Node ≥ 22.
 
 Timestamps are enforced to RFC 3339 with a timezone offset by default (so
 canonical times are region-independent); pass `timestampPolicy: "lenient"` to
