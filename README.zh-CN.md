@@ -49,7 +49,8 @@ npm test            # node --test (154 tests)
 npm run build       # emit dist/
 ```
 
-需要 Node ≥ 20。可选的 SQLite 适配器使用 Node 内置的 `node:sqlite`，在
+需要 Node ≥ 20。CI 覆盖 Node 20 / 22 / 24；仓库 `.nvmrc` 固定 Node 22 作为
+维护默认值，因为可选的 SQLite 适配器使用 Node 内置的 `node:sqlite`，并在
 Node ≥ 22 上可用。
 
 默认情况下时间戳 (timestamp) 强制采用带时区偏移的 RFC 3339 格式（这样规范时间
